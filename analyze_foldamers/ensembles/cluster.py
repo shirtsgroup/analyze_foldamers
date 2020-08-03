@@ -2,7 +2,7 @@ import simtk.unit as unit
 import mdtraj as md
 import numpy as np
 from sklearn.cluster import KMeans
-from foldamers.cg_model.cgmodel import CGModel
+from cg_openmm.cg_model.cgmodel import CGModel
 from cg_openmm.utilities.iotools import write_pdbfile_without_topology
 
 
