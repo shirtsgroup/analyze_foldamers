@@ -2,8 +2,8 @@ import os
 import numpy as np
 import mdtraj as md
 from simtk import unit
-from foldamers.cg_model.cgmodel import CGModel
-from foldamers.utilities.plot import plot_distribution
+from cg_openmm.cg_model.cgmodel import CGModel
+from analyze_foldamers.utilities.plot import plot_distribution
 
 # These functions calculate and plot bond angle and torsion distributions from a CGModel object and pdb trajectory
 
