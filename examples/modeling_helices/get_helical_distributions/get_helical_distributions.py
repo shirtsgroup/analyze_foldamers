@@ -5,10 +5,10 @@ import matplotlib.pyplot as pyplot
 from statistics import mean
 from simtk import unit
 from simtk.openmm.app.pdbfile import PDBFile
-from foldamers.cg_model.cgmodel import CGModel
-from foldamers.parameters.reweight import *
-from foldamers.parameters.secondary_structure import *
-from foldamers.thermo.calc import *
+from cg_openmm.cg_model.cgmodel import CGModel
+from cg_openmm.parameters.reweight import *
+from foldamers.parameters.helical_fitting import *
+from cg_openmm.thermo.calc import *
 from cg_openmm.simulation.rep_exch import *
 
 n_bins = 50
