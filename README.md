@@ -1,8 +1,8 @@
 analyze_foldamers
 ==============================
 [//]: # (Badges)
-[![Travis Build Status](https://travis-ci.com/REPLACE_WITH_OWNER_ACCOUNT/analyze_foldamers.svg?branch=master)](https://travis-ci.com/REPLACE_WITH_OWNER_ACCOUNT/analyze_foldamers)
-[![codecov](https://codecov.io/gh/REPLACE_WITH_OWNER_ACCOUNT/analyze_foldamers/branch/master/graph/badge.svg)](https://codecov.io/gh/REPLACE_WITH_OWNER_ACCOUNT/analyze_foldamers/branch/master)
+[![Travis Build Status](https://travis-ci.com/shirtsgroup/analyze_foldamers.svg?branch=master)](https://travis-ci.com/shirtsgroup/analyze_foldamers)
+[![codecov](https://codecov.io/gh/shirtsgroup/analyze_foldamers/branch/master/graph/badge.svg)](https://codecov.io/gh/shirtsgroup/analyze_foldamers/branch/master)
 
 
 Tools for structural analysis of coarse-grained foldamer simulations
