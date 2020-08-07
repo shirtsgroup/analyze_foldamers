@@ -7,7 +7,7 @@ from simtk import unit
 from simtk.openmm.app.pdbfile import PDBFile
 from cg_openmm.cg_model.cgmodel import CGModel
 from cg_openmm.parameters.reweight import *
-from foldamers.parameters.helical_fitting import *
+from analyze_foldamers.parameters.helical_fitting import *
 from cg_openmm.thermo.calc import *
 from cg_openmm.simulation.rep_exch import *
 

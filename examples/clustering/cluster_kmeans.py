@@ -4,7 +4,7 @@ import mdtraj as md
 import numpy as np
 import matplotlib.pyplot as plt
 from cg_openmm.cg_model.cgmodel import CGModel
-from foldamers.ensembles.cluster import *
+from analyze_foldamers.ensembles.cluster import *
 import pickle
 
 # Load in cgmodel

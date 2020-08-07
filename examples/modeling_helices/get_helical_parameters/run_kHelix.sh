@@ -14,4 +14,4 @@ grid_theta_end 20
 helix_atom_names X1
 print_to_plot 1
 EOF
-/home/gmeek/Foldamers/foldamers/foldamers/parameters/helios.o input
+../../../analyze_foldamers/parameters/helios.o input
