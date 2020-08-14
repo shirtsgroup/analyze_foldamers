@@ -27,7 +27,7 @@ def concatenate_trajectories(pdb_file_list, combined_pdb_file="combined.pdb"):
     return combined_pdb_file
 
 
-def get_cluster_medoid_positions(pdb_file_list, cgmodel, n_clusters=2, frame_start=0, frame_stride=1, frame_end=-1):
+def get_cluster_medoid_positions(pdb_file_list, cgmodel, n_clusters=2, frame_start=0, frame_stride=1, frame_end=-1, output_dir="cluster_output"):
     """
         Given a PDB file and coarse grained model as input, this function performs K-means clustering on the poses in the PDB file, and returns a list of the coordinates for the medoid pose of each cluster.
 
@@ -112,7 +112,7 @@ def get_cluster_medoid_positions(pdb_file_list, cgmodel, n_clusters=2, frame_sta
     for k in range(n_clusters):
         positions = closest_xyz[k] * unit.nanometer
         cgmodel.positions = positions
-        file_name = str("medoid_" + str(k) + ".pdb")
+        file_name = str(f"{output_dir}/medoid_{k}.pdb")
         write_pdbfile_without_topology(cgmodel, file_name)
 
     medoid_positions = closest_xyz * unit.nanometer
