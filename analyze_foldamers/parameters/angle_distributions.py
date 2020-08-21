@@ -8,7 +8,7 @@ from analyze_foldamers.utilities.plot import plot_distribution
 # These functions calculate and plot bond angle and torsion distributions from a CGModel object and pdb trajectory
 
 def calc_bond_angle_distribution(
-    cgmodel,pdbfile,nbins=90,plotfile="angle_hist"
+    cgmodel,pdbfile,nbins=90,plotfile="angle_hist.pdf"
 ):
     """
     Calculate and plot all bond angle distributions from a CGModel object and pdb trajectory
@@ -134,7 +134,7 @@ def calc_bond_angle_distribution(
 
     
 def calc_torsion_distribution(
-    cgmodel,pdbfile,nbins=180,plotfile="torsion_hist"
+    cgmodel,pdbfile,nbins=180,plotfile="torsion_hist.pdf"
 ):
     """
     Calculate and plot all torsion distributions from a CGModel object and pdb trajectory

@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
 
 
@@ -10,10 +11,11 @@ def plot_distribution(
     xlim=None,
     ylim=None,
     figure_title=None,
-    file_name=None,
+    file_name="angle_distribution.pdf",
+    plot_per_page=3,
     marker_string='o-k',
-    linewidth=1,
-    markersize=6,
+    linewidth=0.5,
+    markersize=4,
 ):
     """
     Plot angle or torsion distribution and save to file.
@@ -39,57 +41,73 @@ def plot_distribution(
     :param figure_title: title of overall plot
     :type figure_title: str
     
-    :param file name: name of file, excluding pdf extension
+    :param file name: name of file, including pdf extension
     :type file_name: str
+    
+    :param plot_per_page: name 
     
     :param marker_string: pyplot format string for line type, color, and symbol type (default = 'o-k')
     :type marker_string: str
     
-    :param linewidth: width of plotted line (default=1)
+    :param linewidth: width of plotted line (default=0.5)
     :type linewidth: float
     
-    :param markersize: size of plotted markers (default=6 pts)
+    :param markersize: size of plotted markers (default=4 pts)
     :type markersize: float
    
     """
     
     # Determine number of data series:
     nseries = len(types_dict)
+    nrow = plot_per_page
     
-    # Determine optimal grid format:
-    ncolumn = np.floor(np.sqrt(nseries))
-    nrow = np.ceil(nseries/ncolumn)
+    # Number of pdf pages
+    npage = int(np.ceil(nseries/nrow))
     
-    for key,value in types_dict.items():
-        plt.subplot(nrow,ncolumn,int(key))
-        plt.plot(
-            hist_data[f"{value}_bin_centers"],
-            hist_data[f"{value}_density"],
-            marker_string,
-            linewidth=linewidth,
-            markersize=markersize,
-        )
-    
-        if xlim != None:
-            plt.xlim(xlim[0],xlim[1])
-        if ylim != None:
-            plt.ylim(ylim[0],ylim[1])
+    with PdfPages(file_name) as pdf:
+        plotted_per_page=0
+        page_num=1
+        figure = plt.figure(figsize=(8.5,11))
+        for key,value in types_dict.items():
+            plotted_per_page += 1
             
-        # Use xlabels for bottom row only:
-        # nseries-ncol+1, nseries-ncol+2, ... nseries
-        if xlabel != None and (int(key) > (nseries-ncolumn)):
-            plt.xlabel(xlabel)
+            plt.subplot(nrow,1,plotted_per_page)
+            plt.plot(
+                hist_data[f"{value}_bin_centers"],
+                hist_data[f"{value}_density"],
+                marker_string,
+                linewidth=linewidth,
+                markersize=markersize,
+            )
             
-        # Use ylabels for left column only:
-        # 1, 1+ncol, 1+2*ncol, ...
-        if ylabel != None and ((int(key)-1)%ncolumn == 0):
-            plt.ylabel(ylabel)
-        plt.title(f"{types_dict[key]}")
+            if xlim != None:
+                plt.xlim(xlim[0],xlim[1])
+            if ylim != None:
+                plt.ylim(ylim[0],ylim[1])
+            
+            if ylabel != None:
+                plt.ylabel(ylabel)
+                    
+            plt.title(f"{types_dict[key]}",fontweight='bold')
+            
+            if (plotted_per_page >= nrow) or (int(key)==nseries):
+                # Save and close previous page
+                
+                # Use xlabels for bottom row only:
+                if xlabel != None:
+                    plt.xlabel(xlabel)
+                
+                # Adjust subplot spacing
+                plt.subplots_adjust(hspace=0.3)
 
-    if figure_title != None:
-        plt.suptitle(figure_title)
-        
-    plt.savefig(f"{file_name}.pdf")
-    plt.close()
+                if figure_title != None:
+                    plt.suptitle(f"{figure_title} ({page_num})",fontweight='bold')
+            
+                pdf.savefig()
+                plt.close()
+                plotted_per_page = 0
+                page_num += 1
+                if int(key)!= nseries:
+                    figure = plt.figure(figsize=(8.5,11))
     
     return
