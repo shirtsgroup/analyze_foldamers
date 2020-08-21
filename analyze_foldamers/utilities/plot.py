@@ -44,7 +44,8 @@ def plot_distribution(
     :param file name: name of file, including pdf extension
     :type file_name: str
     
-    :param plot_per_page: name 
+    :param plot_per_page: number of subplots per pdf page (default=3)
+    :type plot_per_page: int
     
     :param marker_string: pyplot format string for line type, color, and symbol type (default = 'o-k')
     :type marker_string: str
