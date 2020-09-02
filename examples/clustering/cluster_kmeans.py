@@ -24,8 +24,8 @@ frame_end=-1
 
 # Run KMeans clustering
 medoid_positions, cluster_size, cluster_rmsd = get_cluster_medoid_positions(
-    pdb_file_list=pdb_file_list,
-    cgmodel=cgmodel,
+    pdb_file_list,
+    cgmodel,
     n_clusters=n_clusters,
     frame_start=frame_start,
     frame_stride=frame_stride,

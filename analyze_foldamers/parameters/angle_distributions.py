@@ -8,7 +8,7 @@ from analyze_foldamers.utilities.plot import plot_distribution
 # These functions calculate and plot bond angle and torsion distributions from a CGModel object and pdb trajectory
 
 def calc_bond_angle_distribution(
-    cgmodel,pdbfile,nbins=90,plotfile="angle_hist.pdf"
+    cgmodel,file,nbins=90,plotfile="angle_hist.pdf"
 ):
     """
     Calculate and plot all bond angle distributions from a CGModel object and pdb trajectory
@@ -16,8 +16,8 @@ def calc_bond_angle_distribution(
     :param cgmodel: CGModel() object
     :type cgmodel: class
     
-    :param pdbfile: path to pdb trajectory file
-    :type pdbfile: str
+    :param file: path to pdb or dcd trajectory file
+    :type file: str
     
     :param nbins: number of bins spanning the range of 0 to 180 degrees, default = 90
     :type nbins: int
@@ -27,8 +27,12 @@ def calc_bond_angle_distribution(
     
     """
     
-    # Load in a trajectory pdb file:
-    traj = md.load(pdbfile)
+    # Load in a trajectory file:
+    if file[-3:] == 'dcd':
+        traj = md.load(file,top=md.Topology.from_openmm(cgmodel.topology))
+    else:
+        traj = md.load(file)
+        
     nframes = traj.n_frames
     
     # Get angle list
@@ -134,16 +138,16 @@ def calc_bond_angle_distribution(
 
     
 def calc_torsion_distribution(
-    cgmodel,pdbfile,nbins=180,plotfile="torsion_hist.pdf"
+    cgmodel,file,nbins=180,plotfile="torsion_hist.pdf"
 ):
     """
-    Calculate and plot all torsion distributions from a CGModel object and pdb trajectory
+    Calculate and plot all torsion distributions from a CGModel object and pdb or dcd trajectory
 
     :param cgmodel: CGModel() object
     :type cgmodel: class
     
-    :param pdbfile: path to pdb trajectory file
-    :type pdbfile: str
+    :param file: path to pdb or dcd trajectory file
+    :type file: str
     
     :param nbins: number of bins spanning the range of -180 to 180 degrees, default = 180
     :type nbins: int
@@ -153,8 +157,12 @@ def calc_torsion_distribution(
     
     """
     
-    # Load in a trajectory pdb file:
-    traj = md.load(pdbfile)
+    # Load in a trajectory file:
+    if file[-3:] == 'dcd':
+        traj = md.load(file,top=md.Topology.from_openmm(cgmodel.topology))
+    else:
+        traj = md.load(file)
+        
     nframes = traj.n_frames
     
     # Get torsion list
