@@ -1,3 +1,4 @@
+import os
 import simtk.unit as unit
 import mdtraj as md
 import numpy as np
@@ -27,12 +28,12 @@ def concatenate_trajectories(pdb_file_list, combined_pdb_file="combined.pdb"):
     return combined_pdb_file
 
 
-def get_cluster_medoid_positions(pdb_file_list, cgmodel, n_clusters=2, frame_start=0, frame_stride=1, frame_end=-1, output_dir="cluster_output"):
+def get_cluster_medoid_positions(file_list, cgmodel, n_clusters=2, frame_start=0, frame_stride=1, frame_end=-1, output_format="pdb", output_dir="cluster_output"):
     """
-        Given a PDB file and coarse grained model as input, this function performs K-means clustering on the poses in the PDB file, and returns a list of the coordinates for the medoid pose of each cluster.
+        Given PDB or DCD trajectory files and coarse grained model as input, this function performs K-means clustering on the poses in the PDB file, and returns a list of the coordinates for the medoid pose of each cluster.
 
-        :param pdb_file_list: A list of PDB files to read and concatenate
-        :type pdb_file_list: List( str )
+        :param file_list: A list of PDB or DCD files to read and concatenate
+        :type file_list: List( str )
 
         :param cgmodel: A CGModel() class object
         :type cgmodel: class
@@ -48,6 +49,9 @@ def get_cluster_medoid_positions(pdb_file_list, cgmodel, n_clusters=2, frame_sta
 
         :param frame_end: Last frame in pdb trajectory file to use for clustering.
         :type frame_end: int
+        
+        :param output_format: file format extension to write medoid coordinates to (default="pdb"), dcd also supported
+        :type output_format: str
 
         :returns:
         - medoid_positions ( np.array( float * unit.angstrom ( n_clusters x num_particles x 3 ) ) ) - A 3D numpy array of poses corresponding to the medoids of all trajectory clusters.
@@ -57,8 +61,11 @@ def get_cluster_medoid_positions(pdb_file_list, cgmodel, n_clusters=2, frame_sta
 
     # Load files as {replica number: replica trajectory}
     rep_traj = {}
-    for i in range(len(pdb_file_list)):
-        rep_traj[i] = md.load(pdb_file_list[i])
+    for i in range(len(file_list)):
+        if file_list[0][-3:] == 'dcd':
+            rep_traj[i] = md.load(file_list[i],top=md.Topology.from_openmm(cgmodel.topology))
+        else:
+            rep_traj[i] = md.load(file_list[i])
 
     # Combine all trajectories, selecting specified frames
     if frame_end == -1:
@@ -70,7 +77,7 @@ def get_cluster_medoid_positions(pdb_file_list, cgmodel, n_clusters=2, frame_sta
 
     traj_all = rep_traj[0][frame_start:frame_end:frame_stride]
 
-    for i in range(len(pdb_file_list)-1):
+    for i in range(len(file_list)-1):
         traj_all = traj_all.join(rep_traj[i+1][frame_start:frame_end:frame_stride])
 
     # Align structures with first frame as reference:
@@ -109,11 +116,21 @@ def get_cluster_medoid_positions(pdb_file_list, cgmodel, n_clusters=2, frame_sta
         cluster_rmsd[k] = np.sqrt(cluster_rmsd[k])
             
     # Write medoids to file
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
+    
     for k in range(n_clusters):
         positions = closest_xyz[k] * unit.nanometer
-        cgmodel.positions = positions
-        file_name = str(f"{output_dir}/medoid_{k}.pdb")
-        write_pdbfile_without_topology(cgmodel, file_name)
+        file_name = str(f"{output_dir}/medoid_{k}.{output_format}")
+        if output_format=="dcd":
+            dcdtraj = md.Trajectory(
+                xyz=positions.value_in_unit(unit.nanometer),
+                topology=md.Topology.from_openmm(cgmodel.topology),
+            )
+            md.Trajectory.save_dcd(dcdtraj,file_name)
+        else:
+            cgmodel.positions = positions
+            write_pdbfile_without_topology(cgmodel, file_name)
 
     medoid_positions = closest_xyz * unit.nanometer
     
