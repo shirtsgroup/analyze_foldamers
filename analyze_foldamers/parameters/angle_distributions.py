@@ -4,6 +4,9 @@ import mdtraj as md
 from simtk import unit
 from cg_openmm.cg_model.cgmodel import CGModel
 from analyze_foldamers.utilities.plot import plot_distribution
+import matplotlib
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
 
 # These functions calculate and plot bond angle and torsion distributions from a CGModel object and pdb trajectory
 
@@ -136,6 +139,301 @@ def calc_bond_angle_distribution(
         
     return angle_hist_data
 
+
+def calc_ramachandran(
+    cgmodel,
+    file_list,
+    nbin_theta=180,
+    nbin_alpha=180,
+    plotfile="ramachandran.pdf",
+    backbone_angle_type = "bb_bb_bb",
+    backbone_torsion_type = "bb_bb_bb_bb",
+    colormap="Spectral",
+):
+    """
+    Calculate and plot ramachandran plot for backbone bond bending-angle and torsion
+    angle, given a CGModel object and pdb or dcd trajectory.
+
+    :param cgmodel: CGModel() object
+    :type cgmodel: class
+    
+    :param file_list: path to pdb or dcd trajectory file(s) - can be a list or single string
+    :type file_list: str of list[str]
+    
+    :param nbin_theta: number of bins for bond-bending angle (spanning from 0 to 180 degrees)
+    :type nbin_theta: int
+    
+    :param nbin_alpha: number of bins for torsion angle (spanning from -180 to +180 degrees)
+    :type nbin_alpha:
+    
+    :param plotfile: Filename for saving torsion distribution pdf plots
+    :type plotfile: str
+    
+    :param backbone_angle_type: particle sequence of the backbone angles (default="bb_bb_bb") - for now only single sequence permitted
+    :type backbone_angle_type: str
+    
+    :param backbone_torsion_type: particle sequence of the backbone angles (default="bb_bb_bb_bb") - for now only single sequence permitted
+    :type backbone_torsion_type: str    
+    
+    :param colormap: matplotlib pyplot colormap to use (default='Spectral')
+    :type colormap: str (case sensitive)
+    
+    """
+    
+    # Convert file_list to list if a single string:
+    if type(file_list) == str:
+        # Single file
+        file_list = file_list.split()
+    
+    # Determine optimal subplot layout
+    nseries = len(file_list)
+    nrow = int(np.ceil(np.sqrt(nseries)))
+    ncol = int(np.ceil(nseries/nrow))
+    
+    # Initialize plot
+    figure, axs = plt.subplots(
+        nrows=nrow,
+        ncols=ncol,
+        figsize=(11,8.5),
+        constrained_layout=True,
+        sharex=True,
+        sharey=True)
+        
+    subplot_id = 1
+    
+    # Store 2d histogram output
+    hist_data = {}
+    xedges = {}
+    yedges = {}
+    image = {}
+    
+    for file in file_list:
+    
+        # Load in a trajectory file:
+        if file[-3:] == 'dcd':
+            traj = md.load(file,top=md.Topology.from_openmm(cgmodel.topology))
+        else:
+            traj = md.load(file)
+            
+        nframes = traj.n_frames
+        
+        # Get angle list
+        angle_list = CGModel.get_bond_angle_list(cgmodel)
+        
+        ang_types = [] # List of angle types for each angle in angle_list
+        
+        ang_array = np.zeros((len(angle_list),3))
+        
+        # Relevant angle types are added to a dictionary as they are discovered 
+        ang_dict = {}
+        
+        # Create an inverse dictionary for getting angle string name from integer type
+        inv_ang_dict = {}
+        
+        # Counter for number of angle types found:
+        i_angle_type = 0
+        
+        # Assign angle types:
+        
+        for i in range(len(angle_list)):
+            ang_array[i,0] = angle_list[i][0]
+            ang_array[i,1] = angle_list[i][1]
+            ang_array[i,2] = angle_list[i][2]
+            
+            particle_types = [
+                CGModel.get_particle_type_name(cgmodel,angle_list[i][0]),
+                CGModel.get_particle_type_name(cgmodel,angle_list[i][1]),
+                CGModel.get_particle_type_name(cgmodel,angle_list[i][2])
+            ]
+            
+            string_name = ""
+            reverse_string_name = ""
+            for particle in particle_types:
+                string_name += f"{particle}_"
+            string_name = string_name[:-1]
+            for particle in reversed(particle_types):
+                reverse_string_name += f"{particle}_"
+            reverse_string_name = reverse_string_name[:-1]
+                
+            if (string_name in ang_dict.keys()) == False:
+                # New angle type found, add to angle dictionary
+                i_angle_type += 1
+                ang_dict[string_name] = i_angle_type
+                ang_dict[reverse_string_name] = i_angle_type
+                # For inverse dict we will use only the forward name based on first encounter
+                inv_ang_dict[str(i_angle_type)] = string_name
+                print(f"adding new angle type {i_angle_type}: {string_name} to dictionary")
+                print(f"adding reverse version {i_angle_type}: {reverse_string_name} to dictionary")
+                
+            ang_types.append(ang_dict[string_name])
+                        
+        # Sort angles by type into separate sub arrays for mdtraj compute_angles
+        ang_sub_arrays = {}
+        for i in range(i_angle_type):
+            ang_sub_arrays[str(i+1)] = np.zeros((ang_types.count(i+1),3))
+        
+        # Counter vector for all angle types
+        n_i = np.zeros((i_angle_type,1), dtype=int)
+        
+        for i in range(len(angle_list)):
+            ang_sub_arrays[str(ang_types[i])][n_i[ang_types[i]-1],:] = ang_array[i,:]
+            n_i[ang_types[i]-1] += 1
+        
+        # Set bin edges:
+        angle_bin_edges = np.linspace(0,180,nbin_theta+1)
+        angle_bin_centers = np.zeros((len(angle_bin_edges)-1,1))
+        for i in range(len(angle_bin_edges)-1):
+            angle_bin_centers[i] = (angle_bin_edges[i]+angle_bin_edges[i+1])/2
+                       
+        for i in range(i_angle_type):
+            if inv_ang_dict[str(i+1)] == backbone_angle_type:
+                # Compute all angle values in trajectory
+                # This returns an [nframes x n_angles] array
+                ang_val_array = md.compute_angles(traj,ang_sub_arrays[str(i+1)])
+                
+                # We will have different numbers of bond-bending angle and torsion angle.
+                # We will set a convention of omitting the last angle value.
+                
+                # Convert to degrees and exclude last angle:  
+                ang_val_array = (180/np.pi)*ang_val_array[:,:-1]
+                
+                # Reshape array:
+                ang_val_array = np.reshape(ang_val_array, (nframes*(n_i[i]-1)[0],1))
+            
+        # Get torsion list
+        torsion_list = CGModel.get_torsion_list(cgmodel)
+        torsion_types = [] # List of torsion types for each torsion in torsion_list
+        torsion_array = np.zeros((len(torsion_list),4))
+        
+        # Relevant torsion types are added to a dictionary as they are discovered 
+        torsion_dict = {}
+        
+        # Create an inverse dictionary for getting torsion string name from integer type
+        inv_torsion_dict = {}
+        
+        # Counter for number of torsion types found:
+        i_torsion_type = 0    
+        
+        # Assign torsion types:
+        
+        for i in range(len(torsion_list)):
+            torsion_array[i,0] = torsion_list[i][0]
+            torsion_array[i,1] = torsion_list[i][1]
+            torsion_array[i,2] = torsion_list[i][2]
+            torsion_array[i,3] = torsion_list[i][3]
+            
+            particle_types = [
+                CGModel.get_particle_type_name(cgmodel,torsion_list[i][0]),
+                CGModel.get_particle_type_name(cgmodel,torsion_list[i][1]),
+                CGModel.get_particle_type_name(cgmodel,torsion_list[i][2]),
+                CGModel.get_particle_type_name(cgmodel,torsion_list[i][3])
+            ]
+            
+            string_name = ""
+            reverse_string_name = ""
+            for particle in particle_types:
+                string_name += f"{particle}_"
+            string_name = string_name[:-1]
+            for particle in reversed(particle_types):
+                reverse_string_name += f"{particle}_"
+            reverse_string_name = reverse_string_name[:-1]
+                
+            if (string_name in torsion_dict.keys()) == False:
+                # New torsion type found, add to torsion dictionary
+                i_torsion_type += 1
+                torsion_dict[string_name] = i_torsion_type
+                torsion_dict[reverse_string_name] = i_torsion_type
+                # For inverse dict we will use only the forward name based on first encounter
+                inv_torsion_dict[str(i_torsion_type)] = string_name
+                
+                print(f"adding new torsion type {i_torsion_type}: {string_name} to dictionary")
+                print(f"adding reverse version {i_torsion_type}: {reverse_string_name} to dictionary")
+                
+                
+            torsion_types.append(torsion_dict[string_name])
+                            
+        # Sort torsions by type into separate sub arrays for mdtraj compute_dihedrals
+        torsion_sub_arrays = {}
+        for i in range(i_torsion_type):
+            torsion_sub_arrays[str(i+1)] = np.zeros((torsion_types.count(i+1),4))
+        
+        # Counter vector for all angle types
+        n_j = np.zeros((i_torsion_type,1), dtype=int) 
+        
+        for i in range(len(torsion_list)):
+            torsion_sub_arrays[str(torsion_types[i])][n_j[torsion_types[i]-1],:] = torsion_array[i,:]
+            n_j[torsion_types[i]-1] += 1
+        
+        # Set bin edges:
+        torsion_bin_edges = np.linspace(-180,180,nbin_alpha+1)
+        torsion_bin_centers = np.zeros((len(torsion_bin_edges)-1,1))
+        for i in range(len(torsion_bin_edges)-1):
+            torsion_bin_centers[i] = (torsion_bin_edges[i]+torsion_bin_edges[i+1])/2
+            
+        for i in range(i_torsion_type):
+            if inv_torsion_dict[str(i+1)] == backbone_torsion_type:
+                # Compute all torsion values in trajectory
+                # This returns an [nframes x n_torsions] array
+                torsion_val_array = md.compute_dihedrals(
+                    traj,torsion_sub_arrays[str(i+1)])
+                
+                # Convert to degrees:  
+                torsion_val_array = (180/np.pi)*torsion_val_array
+                
+                # Reshape array
+                torsion_val_array = np.reshape(torsion_val_array, (nframes*n_j[i][0],1))
+        
+        # 2d histogram the data:
+        
+        row = int(np.ceil(subplot_id/ncol))-1
+        col = int(subplot_id%ncol)-1
+        
+        cmap=plt.get_cmap(colormap)
+        
+        #***Need some better way of normalizing the color data
+        norm=matplotlib.colors.Normalize(vmin=0,vmax=0.01)
+        
+        hist_data_out, xedges_out, yedges_out, image_out = axs[row,col].hist2d(
+            torsion_val_array[:,0],
+            ang_val_array[:,0],
+            bins=[torsion_bin_edges,angle_bin_edges],
+            density=True,
+            cmap=cmap,
+            norm=norm,
+        )  
+        
+        hist_data[file[:-4]] = hist_data_out
+        xedges[file[:-4]] = xedges_out
+        yedges[file[:-4]] = yedges_out
+        image[file[:-4]] = image_out
+        
+        #axs[row,col].set_title(file)
+        
+        subplot_id += 1
+    
+    # Adjust subplot spacing
+    #plt.subplots_adjust(left=0.1, right=0.9, bottom=0.1, top=0.9, wspace=0.1, hspace=0.1)
+    
+    # Add colorbar to right side
+    plt.colorbar(
+        matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap),
+        ax=axs[:,col],
+        shrink=0.6,
+        label='probability density')         
+    
+    # Add common axis labels:
+    # We need to scale the axes spanning all subplots to avoid text overlap
+    ax_common = figure.add_subplot(1, 1, 1, frameon=False)
+    
+    plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
+    plt.xlabel("Alpha (degrees)", fontsize=14, labelpad=15)
+    plt.ylabel("Theta (degrees)", fontsize=14, labelpad=15)
+    
+    plt.savefig(plotfile)
+    plt.close()
+    
+    return hist_data, xedges, yedges
+    
     
 def calc_torsion_distribution(
     cgmodel,file,nbins=180,plotfile="torsion_hist.pdf"
