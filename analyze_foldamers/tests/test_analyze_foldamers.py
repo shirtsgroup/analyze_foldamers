@@ -20,7 +20,7 @@ current_path = os.path.dirname(os.path.abspath(__file__))
 data_path = os.path.join(current_path, 'test_data')
   
     
-def test_clustering_pdb(tmpdir):
+def test_clustering_kmeans_pdb(tmpdir):
     """Test Kmeans clustering"""
     
     output_directory = tmpdir.mkdir("output")
@@ -42,7 +42,7 @@ def test_clustering_pdb(tmpdir):
     frame_end=-1
 
     # Run KMeans clustering
-    medoid_positions, cluster_size, cluster_rmsd = get_cluster_medoid_positions(
+    medoid_positions, cluster_size, cluster_rmsd, silhouette_avg = get_cluster_medoid_positions(
         pdb_file_list,
         cgmodel,
         n_clusters=n_clusters,
@@ -50,13 +50,17 @@ def test_clustering_pdb(tmpdir):
         frame_stride=frame_stride,
         frame_end=-1,
         output_dir=output_directory,
+        plot_silhouette=True,
+        plot_cluster_distance=True,
     )
     
     assert len(cluster_rmsd) == n_clusters
     assert os.path.isfile(f"{output_directory}/medoid_1.pdb")
-
+    assert os.path.isfile(f"{output_directory}/silhouette_kmeans_ncluster_{n_clusters}.pdf") 
+    assert os.path.isfile(f"{output_directory}/kmeans_distances_ncluster_{n_clusters}.pdf")
     
-def test_clustering_dcd(tmpdir):
+    
+def test_clustering_kmeans_dcd(tmpdir):
     """Test Kmeans clustering"""
     
     output_directory = tmpdir.mkdir("output")
@@ -78,7 +82,7 @@ def test_clustering_dcd(tmpdir):
     frame_end=-1
 
     # Run KMeans clustering
-    medoid_positions, cluster_size, cluster_rmsd = get_cluster_medoid_positions(
+    medoid_positions, cluster_size, cluster_rmsd, silhouette_avg = get_cluster_medoid_positions(
         dcd_file_list,
         cgmodel,
         n_clusters=n_clusters,
@@ -87,10 +91,87 @@ def test_clustering_dcd(tmpdir):
         frame_end=-1,
         output_format="dcd",
         output_dir=output_directory,
+        plot_silhouette=True,
+        plot_cluster_distance=True,
     )
     
     assert len(cluster_rmsd) == n_clusters
     assert os.path.isfile(f"{output_directory}/medoid_1.dcd")
+    assert os.path.isfile(f"{output_directory}/silhouette_kmeans_ncluster_{n_clusters}.pdf") 
+    assert os.path.isfile(f"{output_directory}/kmeans_distances_ncluster_{n_clusters}.pdf")
+    
+    
+def test_clustering_optics_pdb(tmpdir):
+    """Test OPTICS clustering"""
+    
+    output_directory = tmpdir.mkdir("output")
+    
+    # Load in cgmodel
+    cgmodel_path = os.path.join(data_path, "stored_cgmodel.pkl")
+    cgmodel = pickle.load(open(cgmodel_path, "rb"))
+    
+    # Create list of trajectory files for clustering analysis
+    number_replicas = 12
+    pdb_file_list = []
+    for i in range(number_replicas):
+        pdb_file_list.append(f"{data_path}/replica_%s.pdb" %(i+1))
+
+    # Set clustering parameters
+    min_samples=5
+    frame_start=0
+    frame_stride=5
+    frame_end=-1
+
+    # Run OPTICS density-based clustering
+    medoid_positions, cluster_sizes, cluster_rmsd, n_noise, silhouette_avg = get_cluster_medoid_positions_OPTICS(
+        pdb_file_list,
+        cgmodel,
+        min_samples=min_samples,
+        frame_start=frame_start,
+        frame_stride=frame_stride,
+        frame_end=-1,
+        output_dir=output_directory,
+        plot_silhouette=True,
+    )
+    
+    assert os.path.isfile(f"{output_directory}/medoid_0.pdb")
+
+    
+def test_clustering_optics_dcd(tmpdir):
+    """Test OPTICS clustering"""
+    
+    output_directory = tmpdir.mkdir("output")
+    
+    # Load in cgmodel
+    cgmodel_path = os.path.join(data_path, "stored_cgmodel.pkl")
+    cgmodel = pickle.load(open(cgmodel_path, "rb"))
+    
+    # Create list of trajectory files for clustering analysis
+    number_replicas = 12
+    dcd_file_list = []
+    for i in range(number_replicas):
+        dcd_file_list.append(f"{data_path}/replica_%s.dcd" %(i+1))
+
+    # Set clustering parameters
+    min_samples=5
+    frame_start=0
+    frame_stride=5
+    frame_end=-1
+
+    # Run OPTICS density-based clustering
+    medoid_positions, cluster_sizes, cluster_rmsd, n_noise, silhouette_avg = get_cluster_medoid_positions_OPTICS(
+        dcd_file_list,
+        cgmodel,
+        min_samples=min_samples,
+        frame_start=frame_start,
+        frame_stride=frame_stride,
+        frame_end=-1,
+        output_format="dcd",
+        output_dir=output_directory,
+        plot_silhouette=True,
+    )
+    
+    assert os.path.isfile(f"{output_directory}/medoid_1.dcd")   
     
     
 def test_angle_dist_calc_pdb(tmpdir):

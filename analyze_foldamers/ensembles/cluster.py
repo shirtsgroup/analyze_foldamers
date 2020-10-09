@@ -95,7 +95,7 @@ def get_cluster_medoid_positions_OPTICS(
         distances[i] = md.rmsd(traj_all, traj_all, i)
     
     # Cluster with sklearn OPTICS
-    optic = OPTICS(min_samples=min_samples).fit(distances)
+    optic = OPTICS(min_samples=min_samples,cluster_method='xi',metric='precomputed').fit(distances)
     # The produces a cluster labels from 0 to n_clusters-1, and assigns -1 to noise points
     
     # Get labels
@@ -171,9 +171,10 @@ def get_cluster_medoid_positions_OPTICS(
     medoid_positions = medoid_xyz * unit.nanometer    
     
     # Get silhouette scores
-    # ***This average will include -1 noise labels, need to retake average without noise:
-    silhouette_avg = silhouette_score(distances, labels)
     silhouette_sample_values = silhouette_samples(distances, labels)
+    
+    silhouette_avg = np.mean(silhouette_sample_values[labels!=-1])
+    
     
     if plot_silhouette:
         # Plot silhouette analysis
@@ -214,9 +215,9 @@ def get_cluster_medoid_positions_OPTICS(
                 horizontalalignment='left')
         
         plt.tight_layout()
-        plt.savefig(f"{output_dir}/silhouette_optics_ncluster_{n_clusters}.pdf")   
+        plt.savefig(f"{output_dir}/silhouette_optics_min_sample_{min_samples}.pdf")   
 
-    return medoid_positions, n_clusters, cluster_sizes, cluster_rmsd, n_noise, silhouette_avg
+    return medoid_positions, cluster_sizes, cluster_rmsd, n_noise, silhouette_avg
     
 
 def get_cluster_medoid_positions(
@@ -272,7 +273,6 @@ def get_cluster_medoid_positions(
 
     # Load files as {replica number: replica trajectory}
     rep_traj = {}
-    print(f"file_list_length: {len(file_list)}")
     for i in range(len(file_list)):
         if file_list[0][-3:] == 'dcd':
             rep_traj[i] = md.load(file_list[i],top=md.Topology.from_openmm(cgmodel.topology))
