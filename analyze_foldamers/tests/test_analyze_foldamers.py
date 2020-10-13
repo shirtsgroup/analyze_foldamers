@@ -189,8 +189,10 @@ def test_angle_dist_calc_pdb(tmpdir):
     angle_hist_data = calc_bond_angle_distribution(
         cgmodel,
         traj_file,
-        plotfile=f"{output_directory}/angle_hist",
+        plotfile=f"{output_directory}/angle_hist_pdb.pdf",
     )
+    
+    assert os.path.isfile(f"{output_directory}/angle_hist_pdb.pdf") 
     
 def test_torsion_dist_calc_pdb(tmpdir):
     """Test angle/torsion distribution calculators"""
@@ -207,8 +209,10 @@ def test_torsion_dist_calc_pdb(tmpdir):
     torsion_hist_data = calc_torsion_distribution(
         cgmodel,
         traj_file,
-        plotfile=f"{output_directory}/torsion_hist",
+        plotfile=f"{output_directory}/torsion_hist_pdb.pdf",
     )
+    
+    assert os.path.isfile(f"{output_directory}/torsion_hist_pdb.pdf") 
     
     
 def test_angle_dist_calc_dcd(tmpdir):
@@ -216,7 +220,7 @@ def test_angle_dist_calc_dcd(tmpdir):
     
     output_directory = tmpdir.mkdir("output")
     
-    # Load in a trajectory pdb file:
+    # Load in a trajectory dcd file:
     traj_file = os.path.join(data_path, "replica_1.dcd")
 
     # Load in a CGModel:
@@ -226,8 +230,10 @@ def test_angle_dist_calc_dcd(tmpdir):
     angle_hist_data = calc_bond_angle_distribution(
         cgmodel,
         traj_file,
-        plotfile=f"{output_directory}/angle_hist",
+        plotfile=f"{output_directory}/angle_hist_dcd.pdf",
     )
+    
+    assert os.path.isfile(f"{output_directory}/angle_hist_dcd.pdf") 
     
     
 def test_torsion_dist_calc_dcd(tmpdir):
@@ -235,7 +241,7 @@ def test_torsion_dist_calc_dcd(tmpdir):
     
     output_directory = tmpdir.mkdir("output")
     
-    # Load in a trajectory pdb file:
+    # Load in a trajectory dcd file:
     traj_file = os.path.join(data_path, "replica_1.dcd")
 
     # Load in a CGModel:
@@ -245,8 +251,56 @@ def test_torsion_dist_calc_dcd(tmpdir):
     torsion_hist_data = calc_torsion_distribution(
         cgmodel,
         traj_file,
-        plotfile=f"{output_directory}/torsion_hist",
+        plotfile=f"{output_directory}/torsion_hist_dcd.pdf",
     )
-        
     
+    assert os.path.isfile(f"{output_directory}/torsion_hist_dcd.pdf") 
+
+    
+def test_ramachandran_calc_pdb(tmpdir):
+    """Test ramachandran calculation/plotting"""
+
+    output_directory = tmpdir.mkdir("output")
+    
+    # Load in a trajectory pdb file:
+    traj_file = os.path.join(data_path, "replica_1.pdb")
+    
+    # Load in a CGModel:
+    cgmodel_path = os.path.join(data_path, "stored_cgmodel.pkl")
+    cgmodel = pickle.load(open(cgmodel_path, "rb"))    
+    
+    rama_hist, xedges, yedges = calc_ramachandran(
+        cgmodel,
+        traj_file,
+        plotfile=f"{output_directory}/ramachandran_pdb.pdf",
+    )
+     
+    assert os.path.isfile(f"{output_directory}/ramachandran_pdb.pdf") 
+     
+    # Fit ramachandran data to 2d Gaussian:
+    param_opt, param_cov = fit_ramachandran_data(rama_hist, xedges, yedges)
+    
+    
+def test_ramachandran_calc_dcd(tmpdir):
+    """Test ramachandran calculation/plotting"""
+
+    output_directory = tmpdir.mkdir("output")
+    
+    # Load in a trajectory pdb file:
+    traj_file = os.path.join(data_path, "replica_1.dcd")
+    
+    # Load in a CGModel:
+    cgmodel_path = os.path.join(data_path, "stored_cgmodel.pkl")
+    cgmodel = pickle.load(open(cgmodel_path, "rb"))    
+    
+    rama_hist, xedges, yedges = calc_ramachandran(
+        cgmodel,
+        traj_file,
+        plotfile=f"{output_directory}/ramachandran_dcd.pdf",
+    )
+     
+    assert os.path.isfile(f"{output_directory}/ramachandran_dcd.pdf") 
+     
+    # Fit ramachandran data to 2d Gaussian:
+    param_opt, param_cov = fit_ramachandran_data(rama_hist, xedges, yedges)    
     

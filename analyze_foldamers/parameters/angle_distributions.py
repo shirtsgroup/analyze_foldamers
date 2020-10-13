@@ -7,6 +7,7 @@ from analyze_foldamers.utilities.plot import plot_distribution
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
+from scipy.optimize import curve_fit
 
 # These functions calculate and plot bond angle and torsion distributions from a CGModel object and pdb trajectory
 
@@ -138,7 +139,138 @@ def calc_bond_angle_distribution(
     )
         
     return angle_hist_data
+    
+    
+def calc_torsion_distribution(
+    cgmodel,file,nbins=180,plotfile="torsion_hist.pdf"
+):
+    """
+    Calculate and plot all torsion distributions from a CGModel object and pdb or dcd trajectory
 
+    :param cgmodel: CGModel() object
+    :type cgmodel: class
+    
+    :param file: path to pdb or dcd trajectory file
+    :type file: str
+    
+    :param nbins: number of bins spanning the range of -180 to 180 degrees, default = 180
+    :type nbins: int
+    
+    :param plotfile: Base filename for saving torsion distribution pdf plots
+    :type plotfile: str
+    
+    """
+    
+    # Load in a trajectory file:
+    if file[-3:] == 'dcd':
+        traj = md.load(file,top=md.Topology.from_openmm(cgmodel.topology))
+    else:
+        traj = md.load(file)
+        
+    nframes = traj.n_frames
+    
+    # Get torsion list
+    torsion_list = CGModel.get_torsion_list(cgmodel)
+    torsion_types = [] # List of torsion types for each torsion in torsion_list
+    torsion_array = np.zeros((len(torsion_list),4))
+    
+    # Relevant torsion types are added to a dictionary as they are discovered 
+    torsion_dict = {}
+    
+    # Create an inverse dictionary for getting torsion string name from integer type
+    inv_torsion_dict = {}
+    
+    # Counter for number of torsion types found:
+    i_torsion_type = 0    
+    
+    # Assign torsion types:
+    
+    for i in range(len(torsion_list)):
+        torsion_array[i,0] = torsion_list[i][0]
+        torsion_array[i,1] = torsion_list[i][1]
+        torsion_array[i,2] = torsion_list[i][2]
+        torsion_array[i,3] = torsion_list[i][3]
+        
+        particle_types = [
+            CGModel.get_particle_type_name(cgmodel,torsion_list[i][0]),
+            CGModel.get_particle_type_name(cgmodel,torsion_list[i][1]),
+            CGModel.get_particle_type_name(cgmodel,torsion_list[i][2]),
+            CGModel.get_particle_type_name(cgmodel,torsion_list[i][3])
+        ]
+        
+        string_name = ""
+        reverse_string_name = ""
+        for particle in particle_types:
+            string_name += f"{particle}_"
+        string_name = string_name[:-1]
+        for particle in reversed(particle_types):
+            reverse_string_name += f"{particle}_"
+        reverse_string_name = reverse_string_name[:-1]
+            
+        if (string_name in torsion_dict.keys()) == False:
+            # New torsion type found, add to torsion dictionary
+            i_torsion_type += 1
+            torsion_dict[string_name] = i_torsion_type
+            torsion_dict[reverse_string_name] = i_torsion_type
+            # For inverse dict we will use only the forward name based on first encounter
+            inv_torsion_dict[str(i_torsion_type)] = string_name
+            
+            print(f"adding new torsion type {i_torsion_type}: {string_name} to dictionary")
+            print(f"adding reverse version {i_torsion_type}: {reverse_string_name} to dictionary")
+            
+            
+        torsion_types.append(torsion_dict[string_name])
+                        
+    # Sort torsions by type into separate sub arrays for mdtraj compute_dihedrals
+    torsion_sub_arrays = {}
+    for i in range(i_torsion_type):
+        torsion_sub_arrays[str(i+1)] = np.zeros((torsion_types.count(i+1),4))
+    
+    # Counter vector for all angle types
+    n_i = np.zeros((i_torsion_type,1), dtype=int) 
+    
+    for i in range(len(torsion_list)):
+        torsion_sub_arrays[str(torsion_types[i])][n_i[torsion_types[i]-1],:] = torsion_array[i,:]
+        n_i[torsion_types[i]-1] += 1
+    
+    # Create dictionary for saving torsion histogram data:
+    torsion_hist_data = {}
+    
+    # Set bin edges:
+    torsion_bin_edges = np.linspace(-180,180,nbins+1)
+    torsion_bin_centers = np.zeros((len(torsion_bin_edges)-1,1))
+    for i in range(len(torsion_bin_edges)-1):
+        torsion_bin_centers[i] = (torsion_bin_edges[i]+torsion_bin_edges[i+1])/2
+        
+    for i in range(i_torsion_type):
+        # Compute all torsion values in trajectory
+        # This returns an [nframes x n_torsions] array
+        torsion_val_array = md.compute_dihedrals(
+            traj,torsion_sub_arrays[str(i+1)])
+        
+        # Reshape arrays and convert to degrees:  
+        torsion_val_array = (180/np.pi)*np.reshape(torsion_val_array, (nframes*n_i[i][0],1))
+        
+        # Histogram and plot results:
+        n_out, bin_edges_out = np.histogram(
+            torsion_val_array, bins=torsion_bin_edges,density=True)
+        
+        torsion_hist_data[f"{inv_torsion_dict[str(i+1)]}_density"]=n_out
+        torsion_hist_data[f"{inv_torsion_dict[str(i+1)]}_bin_centers"]=torsion_bin_centers  
+      
+    plot_distribution(
+        inv_torsion_dict,
+        torsion_hist_data,
+        xlabel="Torsion angle (degrees)",
+        ylabel="Probability density",
+        xlim=[-180,180],
+        figure_title="Torsion_distributions",
+        file_name=f"{plotfile}",
+        marker_string='o-b',
+    )
+      
+    return torsion_hist_data
+    
 
 def calc_ramachandran(
     cgmodel,
@@ -386,21 +518,44 @@ def calc_ramachandran(
         # 2d histogram the data:
         
         row = int(np.ceil(subplot_id/ncol))-1
-        col = int(subplot_id%ncol)-1
+        col = int((subplot_id-1)%ncol)
         
         cmap=plt.get_cmap(colormap)
         
         #***Need some better way of normalizing the color data
-        norm=matplotlib.colors.Normalize(vmin=0,vmax=0.01)
+        norm=matplotlib.colors.Normalize(vmin=0,vmax=0.0075)
         
-        hist_data_out, xedges_out, yedges_out, image_out = axs[row,col].hist2d(
-            torsion_val_array[:,0],
-            ang_val_array[:,0],
-            bins=[torsion_bin_edges,angle_bin_edges],
-            density=True,
-            cmap=cmap,
-            norm=norm,
-        )  
+        # axs subplot object is only subscriptable in dimensions it has multiple entries in
+        if nrow > 1 and ncol > 1: 
+            hist_data_out, xedges_out, yedges_out, image_out = axs[row,col].hist2d(
+                torsion_val_array[:,0],
+                ang_val_array[:,0],
+                bins=[torsion_bin_edges,angle_bin_edges],
+                density=True,
+                cmap=cmap,
+                norm=norm,
+            )
+        
+        if ncol > 1 and nrow == 1:
+            hist_data_out, xedges_out, yedges_out, image_out = axs[col].hist2d(
+                torsion_val_array[:,0],
+                ang_val_array[:,0],
+                bins=[torsion_bin_edges,angle_bin_edges],
+                density=True,
+                cmap=cmap,
+                norm=norm,
+            )
+            
+        if ncol == 1 and nrow == 1:
+            hist_data_out, xedges_out, yedges_out, image_out = axs.hist2d(
+                torsion_val_array[:,0],
+                ang_val_array[:,0],
+                bins=[torsion_bin_edges,angle_bin_edges],
+                density=True,
+                cmap=cmap,
+                norm=norm,
+            )        
+        
         
         hist_data[file[:-4]] = hist_data_out
         xedges[file[:-4]] = xedges_out
@@ -415,11 +570,27 @@ def calc_ramachandran(
     #plt.subplots_adjust(left=0.1, right=0.9, bottom=0.1, top=0.9, wspace=0.1, hspace=0.1)
     
     # Add colorbar to right side
-    plt.colorbar(
-        matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap),
-        ax=axs[:,col],
-        shrink=0.6,
-        label='probability density')         
+    
+    if nrow > 1 and ncol > 1:
+        plt.colorbar(
+            matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap),
+            ax=axs[:,col],
+            shrink=0.6,
+            label='probability density')
+                
+    if ncol > 1 and nrow == 1:
+        plt.colorbar(
+            matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap),
+            ax=axs[col],
+            shrink=0.6,
+            label='probability density')
+
+    if nrow == 1 and ncol == 1:
+        plt.colorbar(
+            matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap),
+            ax=axs,
+            shrink=0.6,
+            label='probability density')            
     
     # Add common axis labels:
     # We need to scale the axes spanning all subplots to avoid text overlap
@@ -435,132 +606,44 @@ def calc_ramachandran(
     return hist_data, xedges, yedges
     
     
-def calc_torsion_distribution(
-    cgmodel,file,nbins=180,plotfile="torsion_hist.pdf"
-):
+def fit_ramachandran_data(hist_data, xedges, yedges):
     """
-    Calculate and plot all torsion distributions from a CGModel object and pdb or dcd trajectory
+    Calculate and plot ramachandran plot for backbone bond bending-angle and torsion
+    angle, given a CGModel object and pdb or dcd trajectory.
 
-    :param cgmodel: CGModel() object
-    :type cgmodel: class
+    :param hist_data: dictionary containing 2D histogram data for one or more data series
+    :type hist_data: dict {series_name: 2D numpy array}
     
-    :param file: path to pdb or dcd trajectory file
-    :type file: str
+    :param xedges: dictionary containing bin edges corresponding to x dimension of hist_data
+    :type xedges: dict {series_name: 1D numpy array}
     
-    :param nbins: number of bins spanning the range of -180 to 180 degrees, default = 180
-    :type nbins: int
-    
-    :param plotfile: Base filename for saving torsion distribution pdf plots
-    :type plotfile: str
+    :param yedges: dictionary containing bin edges corresponding to y dimension of hist_data
+    :type yedges: dict {series_name: 1D numpy array}
     
     """
     
-    # Load in a trajectory file:
-    if file[-3:] == 'dcd':
-        traj = md.load(file,top=md.Topology.from_openmm(cgmodel.topology))
-    else:
-        traj = md.load(file)
+    # Fit to 2d symmetric gaussian:
+    def two_gauss(xy,a,x0,y0,c):
+        x, y = xy
+        return a*np.exp(-((np.power((x-x0),2) + 0.5*np.power((y-y0),2))/(2*np.power(c,2))))
+    
+    param_opt = {}
+    param_cov = {}
         
-    nframes = traj.n_frames
-    
-    # Get torsion list
-    torsion_list = CGModel.get_torsion_list(cgmodel)
-    torsion_types = [] # List of torsion types for each torsion in torsion_list
-    torsion_array = np.zeros((len(torsion_list),4))
-    
-    # Relevant torsion types are added to a dictionary as they are discovered 
-    torsion_dict = {}
-    
-    # Create an inverse dictionary for getting torsion string name from integer type
-    inv_torsion_dict = {}
-    
-    # Counter for number of torsion types found:
-    i_torsion_type = 0    
-    
-    # Assign torsion types:
-    
-    for i in range(len(torsion_list)):
-        torsion_array[i,0] = torsion_list[i][0]
-        torsion_array[i,1] = torsion_list[i][1]
-        torsion_array[i,2] = torsion_list[i][2]
-        torsion_array[i,3] = torsion_list[i][3]
+    for key,value in hist_data.items():
+        z_data = value
+        max_xy_index = np.unravel_index(np.argmax(z_data, axis=None), z_data.shape)
+        max_x = (xedges[key][max_xy_index[0]]+xedges[key][max_xy_index[0]+1])/2
+        max_y = (yedges[key][max_xy_index[1]]+yedges[key][max_xy_index[1]+1])/2
+        param_guess = [0.01,max_x,max_y,5]
+        x_centers = xedges[key][:-1] + (xedges[key][1]-xedges[key][0])/2
+        y_centers = yedges[key][:-1] + (yedges[key][1]-yedges[key][0])/2
+        x_data, y_data = np.meshgrid(x_centers, y_centers)
         
-        particle_types = [
-            CGModel.get_particle_type_name(cgmodel,torsion_list[i][0]),
-            CGModel.get_particle_type_name(cgmodel,torsion_list[i][1]),
-            CGModel.get_particle_type_name(cgmodel,torsion_list[i][2]),
-            CGModel.get_particle_type_name(cgmodel,torsion_list[i][3])
-        ]
+        # Ravel x,y data to a pair of 1D arrays
+        xy_data = np.vstack((x_data.ravel(), y_data.ravel()))
         
-        string_name = ""
-        reverse_string_name = ""
-        for particle in particle_types:
-            string_name += f"{particle}_"
-        string_name = string_name[:-1]
-        for particle in reversed(particle_types):
-            reverse_string_name += f"{particle}_"
-        reverse_string_name = reverse_string_name[:-1]
-            
-        if (string_name in torsion_dict.keys()) == False:
-            # New torsion type found, add to torsion dictionary
-            i_torsion_type += 1
-            torsion_dict[string_name] = i_torsion_type
-            torsion_dict[reverse_string_name] = i_torsion_type
-            # For inverse dict we will use only the forward name based on first encounter
-            inv_torsion_dict[str(i_torsion_type)] = string_name
-            
-            print(f"adding new torsion type {i_torsion_type}: {string_name} to dictionary")
-            print(f"adding reverse version {i_torsion_type}: {reverse_string_name} to dictionary")
-            
-            
-        torsion_types.append(torsion_dict[string_name])
-                        
-    # Sort torsions by type into separate sub arrays for mdtraj compute_dihedrals
-    torsion_sub_arrays = {}
-    for i in range(i_torsion_type):
-        torsion_sub_arrays[str(i+1)] = np.zeros((torsion_types.count(i+1),4))
+        param_opt[key], param_cov[key] = curve_fit(two_gauss, xy_data, z_data.ravel(), param_guess)
     
-    # Counter vector for all angle types
-    n_i = np.zeros((i_torsion_type,1), dtype=int) 
+    return param_opt, param_cov
     
-    for i in range(len(torsion_list)):
-        torsion_sub_arrays[str(torsion_types[i])][n_i[torsion_types[i]-1],:] = torsion_array[i,:]
-        n_i[torsion_types[i]-1] += 1
-    
-    # Create dictionary for saving torsion histogram data:
-    torsion_hist_data = {}
-    
-    # Set bin edges:
-    torsion_bin_edges = np.linspace(-180,180,nbins+1)
-    torsion_bin_centers = np.zeros((len(torsion_bin_edges)-1,1))
-    for i in range(len(torsion_bin_edges)-1):
-        torsion_bin_centers[i] = (torsion_bin_edges[i]+torsion_bin_edges[i+1])/2
-        
-    for i in range(i_torsion_type):
-        # Compute all torsion values in trajectory
-        # This returns an [nframes x n_torsions] array
-        torsion_val_array = md.compute_dihedrals(
-            traj,torsion_sub_arrays[str(i+1)])
-        
-        # Reshape arrays and convert to degrees:  
-        torsion_val_array = (180/np.pi)*np.reshape(torsion_val_array, (nframes*n_i[i][0],1))
-        
-        # Histogram and plot results:
-        n_out, bin_edges_out = np.histogram(
-            torsion_val_array, bins=torsion_bin_edges,density=True)
-        
-        torsion_hist_data[f"{inv_torsion_dict[str(i+1)]}_density"]=n_out
-        torsion_hist_data[f"{inv_torsion_dict[str(i+1)]}_bin_centers"]=torsion_bin_centers  
-      
-    plot_distribution(
-        inv_torsion_dict,
-        torsion_hist_data,
-        xlabel="Torsion angle (degrees)",
-        ylabel="Probability density",
-        xlim=[-180,180],
-        figure_title="Torsion_distributions",
-        file_name=f"{plotfile}",
-        marker_string='o-b',
-    )
-      
-    return torsion_hist_data    

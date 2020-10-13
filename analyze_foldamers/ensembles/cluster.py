@@ -37,7 +37,7 @@ def get_cluster_medoid_positions_OPTICS(
     file_list, cgmodel, min_samples=5, frame_start=0, frame_stride=1, frame_end=-1, output_format="pdb", output_dir="cluster_output",
     plot_silhouette=True):
     """
-        Given PDB or DCD trajectory files and coarse grained model as input, this function performs K-means clustering on the poses in the PDB file, and returns a list of the coordinates for the medoid pose of each cluster.
+        Given PDB or DCD trajectory files and coarse grained model as input, this function performs OPTICS clustering on the poses in the PDB file, and returns a list of the coordinates for the medoid pose of each cluster.
 
         :param file_list: A list of PDB or DCD files to read and concatenate
         :type file_list: List( str )
