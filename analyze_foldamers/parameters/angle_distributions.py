@@ -11,36 +11,8 @@ from scipy.optimize import curve_fit
 
 # These functions calculate and plot bond angle and torsion distributions from a CGModel object and pdb trajectory
 
-def calc_bond_angle_distribution(
-    cgmodel,file,nbins=90,plotfile="angle_hist.pdf"
-):
-    """
-    Calculate and plot all bond angle distributions from a CGModel object and pdb trajectory
-
-    :param cgmodel: CGModel() object
-    :type cgmodel: class
-    
-    :param file: path to pdb or dcd trajectory file
-    :type file: str
-    
-    :param nbins: number of bins spanning the range of 0 to 180 degrees, default = 90
-    :type nbins: int
-    
-    :param plotfile: Base filename for saving bond angle distribution pdf plots
-    :type plotfile: str
-    
-    """
-    
-    # Load in a trajectory file:
-    if file[-3:] == 'dcd':
-        traj = md.load(file,top=md.Topology.from_openmm(cgmodel.topology))
-    else:
-        traj = md.load(file)
-        
-    nframes = traj.n_frames
-    
-    # Get angle list
-    angle_list = CGModel.get_bond_angle_list(cgmodel)
+def assign_angle_types(cgmodel, angle_list):
+    """Internal function for assigning angle types"""
     
     ang_types = [] # List of angle types for each angle in angle_list
     
@@ -100,77 +72,13 @@ def calc_bond_angle_distribution(
     for i in range(len(angle_list)):
         ang_sub_arrays[str(ang_types[i])][n_i[ang_types[i]-1],:] = ang_array[i,:]
         n_i[ang_types[i]-1] += 1
-         
-    # Create dictionary for saving angle histogram data:
-    angle_hist_data = {}
+        
+    return ang_types, ang_array, ang_sub_arrays, n_i, i_angle_type, ang_dict, inv_ang_dict
     
-    # Set bin edges:
-    angle_bin_edges = np.linspace(0,180,nbins+1)
-    angle_bin_centers = np.zeros((len(angle_bin_edges)-1,1))
-    for i in range(len(angle_bin_edges)-1):
-        angle_bin_centers[i] = (angle_bin_edges[i]+angle_bin_edges[i+1])/2
-            
-    for i in range(i_angle_type):
-        # Compute all angle values in trajectory
-        # This returns an [nframes x n_angles] array
-        ang_val_array = md.compute_angles(traj,ang_sub_arrays[str(i+1)])
-        
-        # Reshape arrays and convert to degrees:  
-        ang_val_array = (180/np.pi)*np.reshape(ang_val_array, (nframes*n_i[i][0],1))
-        
-        # Histogram and plot results:
-        
-        n_out, bin_edges_out = np.histogram(
-            ang_val_array, bins=angle_bin_edges,density=True)
-            
-        
-        angle_hist_data[f"{inv_ang_dict[str(i+1)]}_density"]=n_out
-        angle_hist_data[f"{inv_ang_dict[str(i+1)]}_bin_centers"]=angle_bin_centers
-        
-    plot_distribution(
-        inv_ang_dict,
-        angle_hist_data,
-        xlabel="Bond angle (degrees)",
-        ylabel="Probability density",
-        xlim=[0,180],
-        figure_title="Angle distributions",
-        file_name=f"{plotfile}",
-        marker_string='o-r',
-    )
-        
-    return angle_hist_data
-    
-    
-def calc_torsion_distribution(
-    cgmodel,file,nbins=180,plotfile="torsion_hist.pdf"
-):
-    """
-    Calculate and plot all torsion distributions from a CGModel object and pdb or dcd trajectory
 
-    :param cgmodel: CGModel() object
-    :type cgmodel: class
+def assign_torsion_types(cgmodel, torsion_list):
+    """Internal function for assigning torsion types"""
     
-    :param file: path to pdb or dcd trajectory file
-    :type file: str
-    
-    :param nbins: number of bins spanning the range of -180 to 180 degrees, default = 180
-    :type nbins: int
-    
-    :param plotfile: Base filename for saving torsion distribution pdf plots
-    :type plotfile: str
-    
-    """
-    
-    # Load in a trajectory file:
-    if file[-3:] == 'dcd':
-        traj = md.load(file,top=md.Topology.from_openmm(cgmodel.topology))
-    else:
-        traj = md.load(file)
-        
-    nframes = traj.n_frames
-    
-    # Get torsion list
-    torsion_list = CGModel.get_torsion_list(cgmodel)
     torsion_types = [] # List of torsion types for each torsion in torsion_list
     torsion_array = np.zeros((len(torsion_list),4))
     
@@ -181,9 +89,7 @@ def calc_torsion_distribution(
     inv_torsion_dict = {}
     
     # Counter for number of torsion types found:
-    i_torsion_type = 0    
-    
-    # Assign torsion types:
+    i_torsion_type = 0  
     
     for i in range(len(torsion_list)):
         torsion_array[i,0] = torsion_list[i][0]
@@ -232,6 +138,149 @@ def calc_torsion_distribution(
     for i in range(len(torsion_list)):
         torsion_sub_arrays[str(torsion_types[i])][n_i[torsion_types[i]-1],:] = torsion_array[i,:]
         n_i[torsion_types[i]-1] += 1
+        
+    return torsion_types, torsion_array, torsion_sub_arrays, n_i, i_torsion_type, torsion_dict, inv_torsion_dict
+
+
+def calc_bond_angle_distribution(
+    cgmodel, file, nbins=90, frame_start=0, frame_stride=1, frame_end=-1, plotfile="angle_hist.pdf"
+    ):
+    """
+    Calculate and plot all bond angle distributions from a CGModel object and pdb trajectory
+
+    :param cgmodel: CGModel() object
+    :type cgmodel: class
+    
+    :param file: path to pdb or dcd trajectory file
+    :type file: str
+    
+    :param nbins: number of bins spanning the range of 0 to 180 degrees, default = 90
+    :type nbins: int
+    
+    :param frame_start: First frame in trajectory file to use for analysis.
+    :type frame_start: int
+
+    :param frame_stride: Advance by this many frames when reading trajectories.
+    :type frame_stride: int
+
+    :param frame_end: Last frame in trajectory file to use for analysis.
+    :type frame_end: int
+    
+    :param plotfile: Base filename for saving bond angle distribution pdf plots
+    :type plotfile: str
+    
+    """
+    
+    # Load in a trajectory file:
+    if file[-3:] == 'dcd':
+        traj = md.load(file,top=md.Topology.from_openmm(cgmodel.topology))
+    else:
+        traj = md.load(file)
+        
+    # Select frames for analysis:    
+    if frame_end == -1:
+        frame_end = traj.n_frames
+
+    traj = traj[frame_start:frame_end:frame_stride]   
+    
+    nframes = traj.n_frames
+    
+    # Get angle list
+    angle_list = CGModel.get_bond_angle_list(cgmodel)
+    
+    # Assign angle types:
+    ang_types, ang_array, ang_sub_arrays, n_i, i_angle_type, ang_dict, inv_ang_dict = \
+        assign_angle_types(cgmodel, angle_list)
+         
+    # Create dictionary for saving angle histogram data:
+    angle_hist_data = {}
+    
+    # Set bin edges:
+    angle_bin_edges = np.linspace(0,180,nbins+1)
+    angle_bin_centers = np.zeros((len(angle_bin_edges)-1,1))
+    for i in range(len(angle_bin_edges)-1):
+        angle_bin_centers[i] = (angle_bin_edges[i]+angle_bin_edges[i+1])/2
+            
+    for i in range(i_angle_type):
+        # Compute all angle values in trajectory
+        # This returns an [nframes x n_angles] array
+        ang_val_array = md.compute_angles(traj,ang_sub_arrays[str(i+1)])
+        
+        # Reshape arrays and convert to degrees:  
+        ang_val_array = (180/np.pi)*np.reshape(ang_val_array, (nframes*n_i[i][0],1))
+        
+        # Histogram and plot results:
+        
+        n_out, bin_edges_out = np.histogram(
+            ang_val_array, bins=angle_bin_edges,density=True)
+            
+        
+        angle_hist_data[f"{inv_ang_dict[str(i+1)]}_density"]=n_out
+        angle_hist_data[f"{inv_ang_dict[str(i+1)]}_bin_centers"]=angle_bin_centers
+        
+    plot_distribution(
+        inv_ang_dict,
+        angle_hist_data,
+        xlabel="Bond angle (degrees)",
+        ylabel="Probability density",
+        xlim=[0,180],
+        figure_title="Angle distributions",
+        file_name=f"{plotfile}",
+        marker_string='o-r',
+    )
+        
+    return angle_hist_data
+    
+    
+def calc_torsion_distribution(
+    cgmodel, file, nbins=180, frame_start=0, frame_stride=1, frame_end=-1, plotfile="torsion_hist.pdf"
+    ):
+    """
+    Calculate and plot all torsion distributions from a CGModel object and pdb or dcd trajectory
+
+    :param cgmodel: CGModel() object
+    :type cgmodel: class
+    
+    :param file: path to pdb or dcd trajectory file
+    :type file: str
+    
+    :param nbins: number of bins spanning the range of -180 to 180 degrees, default = 180
+    :type nbins: int
+    
+    :param frame_start: First frame in trajectory file to use for analysis.
+    :type frame_start: int
+
+    :param frame_stride: Advance by this many frames when reading trajectories.
+    :type frame_stride: int
+
+    :param frame_end: Last frame in trajectory file to use for analysis.
+    :type frame_end: int
+    
+    :param plotfile: Base filename for saving torsion distribution pdf plots
+    :type plotfile: str
+    
+    """
+    
+    # Load in a trajectory file:
+    if file[-3:] == 'dcd':
+        traj = md.load(file,top=md.Topology.from_openmm(cgmodel.topology))
+    else:
+        traj = md.load(file)
+        
+    # Select frames for analysis:    
+    if frame_end == -1:
+        frame_end = traj.n_frames
+
+    traj = traj[frame_start:frame_end:frame_stride] 
+        
+    nframes = traj.n_frames
+    
+    # Get torsion list
+    torsion_list = CGModel.get_torsion_list(cgmodel)
+    
+    # Assign torsion types
+    torsion_types, torsion_array, torsion_sub_arrays, n_i, i_torsion_type, torsion_dict, inv_torsion_dict = \
+        assign_torsion_types(cgmodel, torsion_list)
     
     # Create dictionary for saving torsion histogram data:
     torsion_hist_data = {}
@@ -277,6 +326,9 @@ def calc_ramachandran(
     file_list,
     nbin_theta=180,
     nbin_alpha=180,
+    frame_start=0,
+    frame_stride=1,
+    frame_end=-1,
     plotfile="ramachandran.pdf",
     backbone_angle_type = "bb_bb_bb",
     backbone_torsion_type = "bb_bb_bb_bb",
@@ -297,6 +349,15 @@ def calc_ramachandran(
     
     :param nbin_alpha: number of bins for torsion angle (spanning from -180 to +180 degrees)
     :type nbin_alpha:
+    
+    :param frame_start: First frame in trajectory file to use for analysis.
+    :type frame_start: int
+
+    :param frame_stride: Advance by this many frames when reading trajectories.
+    :type frame_stride: int
+
+    :param frame_end: Last frame in trajectory file to use for analysis.
+    :type frame_end: int
     
     :param plotfile: Filename for saving torsion distribution pdf plots
     :type plotfile: str
@@ -346,6 +407,13 @@ def calc_ramachandran(
             traj = md.load(file,top=md.Topology.from_openmm(cgmodel.topology))
         else:
             traj = md.load(file)
+            
+            
+        # Select frames for analysis:    
+        if frame_end == -1:
+            frame_end = traj.n_frames
+
+        traj = traj[frame_start:frame_end:frame_stride]             
             
         nframes = traj.n_frames
         
