@@ -23,7 +23,7 @@ frame_stride=10
 frame_end=-1
 
 # Run KMeans clustering
-medoid_positions, cluster_size, cluster_rmsd, silhouette_avg = get_cluster_medoid_positions(
+medoid_positions, cluster_size, cluster_rmsd, silhouette_avg = get_cluster_medoid_positions_KMeans(
     pdb_file_list,
     cgmodel,
     n_clusters=n_clusters,
