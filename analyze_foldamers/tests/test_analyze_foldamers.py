@@ -42,7 +42,7 @@ def test_clustering_kmeans_pdb(tmpdir):
     frame_end=-1
 
     # Run KMeans clustering
-    medoid_positions, cluster_size, cluster_rmsd, silhouette_avg = get_cluster_medoid_positions(
+    medoid_positions, cluster_size, cluster_rmsd, silhouette_avg = get_cluster_medoid_positions_KMeans(
         pdb_file_list,
         cgmodel,
         n_clusters=n_clusters,
@@ -82,7 +82,7 @@ def test_clustering_kmeans_dcd(tmpdir):
     frame_end=-1
 
     # Run KMeans clustering
-    medoid_positions, cluster_size, cluster_rmsd, silhouette_avg = get_cluster_medoid_positions(
+    medoid_positions, cluster_size, cluster_rmsd, silhouette_avg = get_cluster_medoid_positions_KMeans(
         dcd_file_list,
         cgmodel,
         n_clusters=n_clusters,
@@ -99,6 +99,83 @@ def test_clustering_kmeans_dcd(tmpdir):
     assert os.path.isfile(f"{output_directory}/medoid_1.dcd")
     assert os.path.isfile(f"{output_directory}/silhouette_kmeans_ncluster_{n_clusters}.pdf") 
     assert os.path.isfile(f"{output_directory}/kmeans_distances_ncluster_{n_clusters}.pdf")
+    
+    
+def test_clustering_dbscan_pdb(tmpdir):
+    """Test DBSCAN clustering"""
+    
+    output_directory = tmpdir.mkdir("output")
+    
+    # Load in cgmodel
+    cgmodel_path = os.path.join(data_path, "stored_cgmodel.pkl")
+    cgmodel = pickle.load(open(cgmodel_path, "rb"))
+    
+    # Create list of trajectory files for clustering analysis
+    number_replicas = 12
+    pdb_file_list = []
+    for i in range(number_replicas):
+        pdb_file_list.append(f"{data_path}/replica_%s.pdb" %(i+1))
+
+    # Set clustering parameters
+    min_samples=3
+    eps=3
+    frame_start=0
+    frame_stride=5
+    frame_end=-1
+
+    # Run OPTICS density-based clustering
+    medoid_positions, cluster_sizes, cluster_rmsd, n_noise, silhouette_avg = get_cluster_medoid_positions_DBSCAN(
+        pdb_file_list,
+        cgmodel,
+        min_samples=min_samples,
+        eps=eps,
+        frame_start=frame_start,
+        frame_stride=frame_stride,
+        frame_end=-1,
+        output_dir=output_directory,
+        plot_silhouette=True,
+    )
+    
+    assert os.path.isfile(f"{output_directory}/medoid_0.pdb")
+
+    
+def test_clustering_dbscan_dcd(tmpdir):
+    """Test DBSCAN clustering"""
+    
+    output_directory = tmpdir.mkdir("output")
+    
+    # Load in cgmodel
+    cgmodel_path = os.path.join(data_path, "stored_cgmodel.pkl")
+    cgmodel = pickle.load(open(cgmodel_path, "rb"))
+    
+    # Create list of trajectory files for clustering analysis
+    number_replicas = 12
+    dcd_file_list = []
+    for i in range(number_replicas):
+        dcd_file_list.append(f"{data_path}/replica_%s.dcd" %(i+1))
+
+    # Set clustering parameters
+    min_samples=3
+    eps=3
+    frame_start=0
+    frame_stride=5
+    frame_end=-1
+
+    # Run OPTICS density-based clustering
+    medoid_positions, cluster_sizes, cluster_rmsd, n_noise, silhouette_avg = get_cluster_medoid_positions_DBSCAN(
+        dcd_file_list,
+        cgmodel,
+        min_samples=min_samples,
+        eps=eps,
+        frame_start=frame_start,
+        frame_stride=frame_stride,
+        frame_end=-1,
+        output_format="dcd",
+        output_dir=output_directory,
+        plot_silhouette=True,
+    )
+    
+    assert os.path.isfile(f"{output_directory}/medoid_0.dcd")       
     
     
 def test_clustering_optics_pdb(tmpdir):
