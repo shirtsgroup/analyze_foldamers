@@ -378,27 +378,9 @@ def calc_ramachandran(
         # Single file
         file_list = file_list.split()
     
-    # Determine optimal subplot layout
-    nseries = len(file_list)
-    nrow = int(np.ceil(np.sqrt(nseries)))
-    ncol = int(np.ceil(nseries/nrow))
-    
-    # Initialize plot
-    figure, axs = plt.subplots(
-        nrows=nrow,
-        ncols=ncol,
-        figsize=(11,8.5),
-        constrained_layout=True,
-        sharex=True,
-        sharey=True)
-        
-    subplot_id = 1
-    
-    # Store 2d histogram output
-    hist_data = {}
-    xedges = {}
-    yedges = {}
-    image = {}
+    # Store angle, torsion values by filename for computing global colormap
+    ang_val_array = {}
+    torsion_val_array = {}
     
     for file in file_list:
     
@@ -420,64 +402,9 @@ def calc_ramachandran(
         # Get angle list
         angle_list = CGModel.get_bond_angle_list(cgmodel)
         
-        ang_types = [] # List of angle types for each angle in angle_list
-        
-        ang_array = np.zeros((len(angle_list),3))
-        
-        # Relevant angle types are added to a dictionary as they are discovered 
-        ang_dict = {}
-        
-        # Create an inverse dictionary for getting angle string name from integer type
-        inv_ang_dict = {}
-        
-        # Counter for number of angle types found:
-        i_angle_type = 0
-        
         # Assign angle types:
-        
-        for i in range(len(angle_list)):
-            ang_array[i,0] = angle_list[i][0]
-            ang_array[i,1] = angle_list[i][1]
-            ang_array[i,2] = angle_list[i][2]
-            
-            particle_types = [
-                CGModel.get_particle_type_name(cgmodel,angle_list[i][0]),
-                CGModel.get_particle_type_name(cgmodel,angle_list[i][1]),
-                CGModel.get_particle_type_name(cgmodel,angle_list[i][2])
-            ]
-            
-            string_name = ""
-            reverse_string_name = ""
-            for particle in particle_types:
-                string_name += f"{particle}_"
-            string_name = string_name[:-1]
-            for particle in reversed(particle_types):
-                reverse_string_name += f"{particle}_"
-            reverse_string_name = reverse_string_name[:-1]
-                
-            if (string_name in ang_dict.keys()) == False:
-                # New angle type found, add to angle dictionary
-                i_angle_type += 1
-                ang_dict[string_name] = i_angle_type
-                ang_dict[reverse_string_name] = i_angle_type
-                # For inverse dict we will use only the forward name based on first encounter
-                inv_ang_dict[str(i_angle_type)] = string_name
-                print(f"adding new angle type {i_angle_type}: {string_name} to dictionary")
-                print(f"adding reverse version {i_angle_type}: {reverse_string_name} to dictionary")
-                
-            ang_types.append(ang_dict[string_name])
-                        
-        # Sort angles by type into separate sub arrays for mdtraj compute_angles
-        ang_sub_arrays = {}
-        for i in range(i_angle_type):
-            ang_sub_arrays[str(i+1)] = np.zeros((ang_types.count(i+1),3))
-        
-        # Counter vector for all angle types
-        n_i = np.zeros((i_angle_type,1), dtype=int)
-        
-        for i in range(len(angle_list)):
-            ang_sub_arrays[str(ang_types[i])][n_i[ang_types[i]-1],:] = ang_array[i,:]
-            n_i[ang_types[i]-1] += 1
+        ang_types, ang_array, ang_sub_arrays, n_i, i_angle_type, ang_dict, inv_ang_dict = \
+            assign_angle_types(cgmodel, angle_list)
         
         # Set bin edges:
         angle_bin_edges = np.linspace(0,180,nbin_theta+1)
@@ -489,80 +416,23 @@ def calc_ramachandran(
             if inv_ang_dict[str(i+1)] == backbone_angle_type:
                 # Compute all angle values in trajectory
                 # This returns an [nframes x n_angles] array
-                ang_val_array = md.compute_angles(traj,ang_sub_arrays[str(i+1)])
+                ang_val_array[file] = md.compute_angles(traj,ang_sub_arrays[str(i+1)])
                 
                 # We will have different numbers of bond-bending angle and torsion angle.
                 # We will set a convention of omitting the last angle value.
                 
                 # Convert to degrees and exclude last angle:  
-                ang_val_array = (180/np.pi)*ang_val_array[:,:-1]
+                ang_val_array[file] = (180/np.pi)*ang_val_array[file][:,:-1]
                 
                 # Reshape array:
-                ang_val_array = np.reshape(ang_val_array, (nframes*(n_i[i]-1)[0],1))
+                ang_val_array[file] = np.reshape(ang_val_array[file], (nframes*(n_i[i]-1)[0],1))
             
         # Get torsion list
         torsion_list = CGModel.get_torsion_list(cgmodel)
-        torsion_types = [] # List of torsion types for each torsion in torsion_list
-        torsion_array = np.zeros((len(torsion_list),4))
-        
-        # Relevant torsion types are added to a dictionary as they are discovered 
-        torsion_dict = {}
-        
-        # Create an inverse dictionary for getting torsion string name from integer type
-        inv_torsion_dict = {}
-        
-        # Counter for number of torsion types found:
-        i_torsion_type = 0    
-        
-        # Assign torsion types:
-        
-        for i in range(len(torsion_list)):
-            torsion_array[i,0] = torsion_list[i][0]
-            torsion_array[i,1] = torsion_list[i][1]
-            torsion_array[i,2] = torsion_list[i][2]
-            torsion_array[i,3] = torsion_list[i][3]
-            
-            particle_types = [
-                CGModel.get_particle_type_name(cgmodel,torsion_list[i][0]),
-                CGModel.get_particle_type_name(cgmodel,torsion_list[i][1]),
-                CGModel.get_particle_type_name(cgmodel,torsion_list[i][2]),
-                CGModel.get_particle_type_name(cgmodel,torsion_list[i][3])
-            ]
-            
-            string_name = ""
-            reverse_string_name = ""
-            for particle in particle_types:
-                string_name += f"{particle}_"
-            string_name = string_name[:-1]
-            for particle in reversed(particle_types):
-                reverse_string_name += f"{particle}_"
-            reverse_string_name = reverse_string_name[:-1]
-                
-            if (string_name in torsion_dict.keys()) == False:
-                # New torsion type found, add to torsion dictionary
-                i_torsion_type += 1
-                torsion_dict[string_name] = i_torsion_type
-                torsion_dict[reverse_string_name] = i_torsion_type
-                # For inverse dict we will use only the forward name based on first encounter
-                inv_torsion_dict[str(i_torsion_type)] = string_name
-                
-                print(f"adding new torsion type {i_torsion_type}: {string_name} to dictionary")
-                print(f"adding reverse version {i_torsion_type}: {reverse_string_name} to dictionary")
-                
-                
-            torsion_types.append(torsion_dict[string_name])
-                            
-        # Sort torsions by type into separate sub arrays for mdtraj compute_dihedrals
-        torsion_sub_arrays = {}
-        for i in range(i_torsion_type):
-            torsion_sub_arrays[str(i+1)] = np.zeros((torsion_types.count(i+1),4))
-        
-        # Counter vector for all angle types
-        n_j = np.zeros((i_torsion_type,1), dtype=int) 
-        
-        for i in range(len(torsion_list)):
-            torsion_sub_arrays[str(torsion_types[i])][n_j[torsion_types[i]-1],:] = torsion_array[i,:]
-            n_j[torsion_types[i]-1] += 1
+
+        # Assign torsion types
+        torsion_types, torsion_array, torsion_sub_arrays, n_j, i_torsion_type, torsion_dict, inv_torsion_dict = \
+            assign_torsion_types(cgmodel, torsion_list)
         
         # Set bin edges:
         torsion_bin_edges = np.linspace(-180,180,nbin_alpha+1)
@@ -574,30 +444,123 @@ def calc_ramachandran(
             if inv_torsion_dict[str(i+1)] == backbone_torsion_type:
                 # Compute all torsion values in trajectory
                 # This returns an [nframes x n_torsions] array
-                torsion_val_array = md.compute_dihedrals(
+                torsion_val_array[file] = md.compute_dihedrals(
                     traj,torsion_sub_arrays[str(i+1)])
                 
                 # Convert to degrees:  
-                torsion_val_array = (180/np.pi)*torsion_val_array
+                torsion_val_array[file] = (180/np.pi)*torsion_val_array[file]
                 
                 # Reshape array
-                torsion_val_array = np.reshape(torsion_val_array, (nframes*n_j[i][0],1))
+                torsion_val_array[file] = np.reshape(torsion_val_array[file], (nframes*n_j[i][0],1))
         
-        # 2d histogram the data:
+    # 2d histogram the data and plot:
+    hist_data, xedges, yedges = plot_ramachandran(
+        file_list, ang_val_array, torsion_val_array, angle_bin_edges, torsion_bin_edges,
+        plotfile, colormap)
+    
+    return hist_data, xedges, yedges
+    
+    
+def plot_ramachandran(file_list, ang_val_array, torsion_val_array, angle_bin_edges, torsion_bin_edges,
+    plotfile, colormap): 
+    """Internal function for 2d histogramming angle data and creating ramachandran plots"""
+    
+    # Store 2d histogram output
+    hist_data = {}
+    xedges = {}
+    yedges = {}
+    image = {}
+    
+    # Determine optimal subplot layout
+    nseries = len(file_list)
+    nrow = int(np.ceil(np.sqrt(nseries)))
+    ncol = int(np.ceil(nseries/nrow))
+    
+    # Initialize plot
+    figure, axs = plt.subplots(
+        nrows=nrow,
+        ncols=ncol,
+        figsize=(11,8.5),
+        constrained_layout=True,
+        sharex=True,
+        sharey=True)
         
+    subplot_id = 1
+    
+    for file in file_list:
+    
         row = int(np.ceil(subplot_id/ncol))-1
         col = int((subplot_id-1)%ncol)
-        
-        cmap=plt.get_cmap(colormap)
-        
-        #***Need some better way of normalizing the color data
-        norm=matplotlib.colors.Normalize(vmin=0,vmax=0.0075)
         
         # axs subplot object is only subscriptable in dimensions it has multiple entries in
         if nrow > 1 and ncol > 1: 
             hist_data_out, xedges_out, yedges_out, image_out = axs[row,col].hist2d(
-                torsion_val_array[:,0],
-                ang_val_array[:,0],
+                torsion_val_array[file][:,0],
+                ang_val_array[file][:,0],
+                bins=[torsion_bin_edges,angle_bin_edges],
+                density=True,
+            )
+        
+        if ncol > 1 and nrow == 1:
+            hist_data_out, xedges_out, yedges_out, image_out = axs[col].hist2d(
+                torsion_val_array[file][:,0],
+                ang_val_array[file][:,0],
+                bins=[torsion_bin_edges,angle_bin_edges],
+                density=True,
+            )
+            
+        if ncol == 1 and nrow == 1:
+            hist_data_out, xedges_out, yedges_out, image_out = axs.hist2d(
+                torsion_val_array[file][:,0],
+                ang_val_array[file][:,0],
+                bins=[torsion_bin_edges,angle_bin_edges],
+                density=True,
+            )        
+        
+        hist_data[file[:-4]] = hist_data_out
+        xedges[file[:-4]] = xedges_out
+        yedges[file[:-4]] = yedges_out
+        image[file[:-4]] = image_out   
+        
+        #axs[row,col].set_title(file)
+        
+        subplot_id += 1
+        
+    plt.close()    
+        
+    # Renormalize data to global maximum:
+    max_global = 0
+    for key, val in hist_data.items():
+        max_i = np.amax(val)
+        if max_i > max_global:
+            max_global = max_i  
+       
+    # Re-initialize plot
+    figure, axs = plt.subplots(
+        nrows=nrow,
+        ncols=ncol,
+        figsize=(11,8.5),
+        constrained_layout=True,
+        sharex=True,
+        sharey=True)  
+
+    # Update the colormap normalization:   
+    cmap=plt.get_cmap(colormap)     
+    norm=matplotlib.colors.Normalize(vmin=0,vmax=max_global)           
+       
+    subplot_id = 1
+       
+    for file in file_list:
+        # Renormalize quadmesh images
+        # There should be a way to do this using QuadMesh.set_norm.
+        # For now just replot the data:
+        row = int(np.ceil(subplot_id/ncol))-1
+        col = int((subplot_id-1)%ncol)
+        
+        if nrow > 1 and ncol > 1: 
+            hist_data_out, xedges_out, yedges_out, image_out = axs[row,col].hist2d(
+                torsion_val_array[file][:,0],
+                ang_val_array[file][:,0],
                 bins=[torsion_bin_edges,angle_bin_edges],
                 density=True,
                 cmap=cmap,
@@ -606,8 +569,8 @@ def calc_ramachandran(
         
         if ncol > 1 and nrow == 1:
             hist_data_out, xedges_out, yedges_out, image_out = axs[col].hist2d(
-                torsion_val_array[:,0],
-                ang_val_array[:,0],
+                torsion_val_array[file][:,0],
+                ang_val_array[file][:,0],
                 bins=[torsion_bin_edges,angle_bin_edges],
                 density=True,
                 cmap=cmap,
@@ -616,49 +579,45 @@ def calc_ramachandran(
             
         if ncol == 1 and nrow == 1:
             hist_data_out, xedges_out, yedges_out, image_out = axs.hist2d(
-                torsion_val_array[:,0],
-                ang_val_array[:,0],
+                torsion_val_array[file][:,0],
+                ang_val_array[file][:,0],
                 bins=[torsion_bin_edges,angle_bin_edges],
                 density=True,
                 cmap=cmap,
                 norm=norm,
-            )        
+            )                
         
         
         hist_data[file[:-4]] = hist_data_out
         xedges[file[:-4]] = xedges_out
         yedges[file[:-4]] = yedges_out
-        image[file[:-4]] = image_out
+        image[file[:-4]] = image_out        
         
-        #axs[row,col].set_title(file)
+        # Add colorbar to right side
         
-        subplot_id += 1
-    
-    # Adjust subplot spacing
-    #plt.subplots_adjust(left=0.1, right=0.9, bottom=0.1, top=0.9, wspace=0.1, hspace=0.1)
-    
-    # Add colorbar to right side
-    
-    if nrow > 1 and ncol > 1:
-        plt.colorbar(
-            matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap),
-            ax=axs[:,col],
-            shrink=0.6,
-            label='probability density')
-                
-    if ncol > 1 and nrow == 1:
-        plt.colorbar(
-            matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap),
-            ax=axs[col],
-            shrink=0.6,
-            label='probability density')
+        if nrow > 1 and ncol > 1:
+            plt.colorbar(
+                matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap),
+                ax=axs[:,col],
+                shrink=0.6,
+                label='probability density')
+                    
+        if ncol > 1 and nrow == 1:
+            plt.colorbar(
+                matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap),
+                ax=axs[col],
+                shrink=0.6,
+                label='probability density')
 
-    if nrow == 1 and ncol == 1:
-        plt.colorbar(
-            matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap),
-            ax=axs,
-            shrink=0.6,
-            label='probability density')            
+        if nrow == 1 and ncol == 1:
+            plt.colorbar(
+                matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap),
+                ax=axs,
+                shrink=0.6,
+                label='probability density')            
+    
+        subplot_id += 1
+        
     
     # Add common axis labels:
     # We need to scale the axes spanning all subplots to avoid text overlap
@@ -670,7 +629,7 @@ def calc_ramachandran(
     
     plt.savefig(plotfile)
     plt.close()
-    
+
     return hist_data, xedges, yedges
     
     
