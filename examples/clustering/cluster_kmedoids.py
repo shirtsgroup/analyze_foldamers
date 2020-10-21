@@ -23,13 +23,20 @@ frame_stride=10
 frame_end=-1
 
 # Run KMeans clustering
-medoid_positions, cluster_size, cluster_rmsd, silhouette_avg = get_cluster_medoid_positions_KMeans(
-    pdb_file_list,
-    cgmodel,
-    n_clusters=n_clusters,
-    frame_start=frame_start,
-    frame_stride=frame_stride,
-    frame_end=-1)
+medoid_positions, cluster_size, cluster_rmsd, silhouette_avg = \
+    get_cluster_medoid_positions_KMedoids(
+        pdb_file_list,
+        cgmodel,
+        n_clusters=n_clusters,
+        frame_start=frame_start,
+        frame_stride=frame_stride,
+        frame_end=frame_end,
+        output_dir=output_directory,
+        plot_silhouette=True,
+        plot_rmsd_hist=True,
+        filter=True,
+        filter_ratio=0.20,
+    )
 
 print(f'Cluster sizes: {cluster_size}')
 print(f'Cluster rmsd: {cluster_rmsd}')
