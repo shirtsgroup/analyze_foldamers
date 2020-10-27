@@ -6,6 +6,7 @@ from cg_openmm.cg_model.cgmodel import CGModel
 from analyze_foldamers.utilities.plot import plot_distribution
 import matplotlib
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 from matplotlib.backends.backend_pdf import PdfPages
 from scipy.optimize import curve_fit
 
@@ -473,28 +474,40 @@ def plot_ramachandran(file_list, ang_val_array, torsion_val_array, angle_bin_edg
     
     # Determine optimal subplot layout
     nseries = len(file_list)
-    nrow = int(np.ceil(np.sqrt(nseries)))
-    ncol = int(np.ceil(nseries/nrow))
+    nrow = int(np.ceil(np.sqrt(nseries)))+1
+    ncol = int(np.ceil(nseries/nrow))+2
     
     # Initialize plot
-    figure, axs = plt.subplots(
-        nrows=nrow,
-        ncols=ncol,
-        figsize=(11,8.5),
+    
+    figure = plt.figure(
         constrained_layout=True,
-        sharex=True,
-        sharey=True)
+        figsize=(11,8.5),
+        )
+    
+    # Gridspec width and height ratios:
+    # Add extra space on sides for labels / colorbar
+    widths = np.ones(ncol)
+    widths[0]=0.1
+    widths[-1]=0.01
+    heights = np.ones(nrow)
+    heights[-1] = 0.1
+        
+    fig_specs = figure.add_gridspec(
+        ncols=ncol, nrows=nrow, width_ratios=widths, height_ratios=heights
+        )
         
     subplot_id = 1
     
     for file in file_list:
     
-        row = int(np.ceil(subplot_id/ncol))-1
-        col = int((subplot_id-1)%ncol)
+        # Accounting for blank gridspec at the borders:
+        row = int(np.ceil(subplot_id/(ncol-2)))-1
+        col = 1+int((subplot_id-1)%(ncol-2))
         
         # axs subplot object is only subscriptable in dimensions it has multiple entries in
         if nrow > 1 and ncol > 1: 
-            hist_data_out, xedges_out, yedges_out, image_out = axs[row,col].hist2d(
+            ax = figure.add_subplot(fig_specs[row,col])
+            hist_data_out, xedges_out, yedges_out, image_out = ax.hist2d(
                 torsion_val_array[file][:,0],
                 ang_val_array[file][:,0],
                 bins=[torsion_bin_edges,angle_bin_edges],
@@ -502,7 +515,8 @@ def plot_ramachandran(file_list, ang_val_array, torsion_val_array, angle_bin_edg
             )
         
         if ncol > 1 and nrow == 1:
-            hist_data_out, xedges_out, yedges_out, image_out = axs[col].hist2d(
+            ax = figure.add_subplot(fig_specs[row,col])
+            hist_data_out, xedges_out, yedges_out, image_out = ax.hist2d(
                 torsion_val_array[file][:,0],
                 ang_val_array[file][:,0],
                 bins=[torsion_bin_edges,angle_bin_edges],
@@ -510,7 +524,8 @@ def plot_ramachandran(file_list, ang_val_array, torsion_val_array, angle_bin_edg
             )
             
         if ncol == 1 and nrow == 1:
-            hist_data_out, xedges_out, yedges_out, image_out = axs.hist2d(
+            ax = figure.add_subplot(fig_specs[row,col])
+            hist_data_out, xedges_out, yedges_out, image_out = ax.hist2d(
                 torsion_val_array[file][:,0],
                 ang_val_array[file][:,0],
                 bins=[torsion_bin_edges,angle_bin_edges],
@@ -536,14 +551,15 @@ def plot_ramachandran(file_list, ang_val_array, torsion_val_array, angle_bin_edg
             max_global = max_i  
        
     # Re-initialize plot
-    figure, axs = plt.subplots(
-        nrows=nrow,
-        ncols=ncol,
-        figsize=(11,8.5),
+    figure = plt.figure(
         constrained_layout=True,
-        sharex=True,
-        sharey=True)  
+        figsize=(11,8.5),
+        )
 
+    fig_specs = figure.add_gridspec(
+        ncols=ncol, nrows=nrow, width_ratios=widths, height_ratios=heights
+        )        
+        
     # Update the colormap normalization:   
     cmap=plt.get_cmap(colormap)     
     norm=matplotlib.colors.Normalize(vmin=0,vmax=max_global)           
@@ -554,11 +570,14 @@ def plot_ramachandran(file_list, ang_val_array, torsion_val_array, angle_bin_edg
         # Renormalize quadmesh images
         # There should be a way to do this using QuadMesh.set_norm.
         # For now just replot the data:
-        row = int(np.ceil(subplot_id/ncol))-1
-        col = int((subplot_id-1)%ncol)
+        
+        # Accounting for blank gridspec at the borders:
+        row = int(np.ceil(subplot_id/(ncol-2)))-1
+        col = 1+int((subplot_id-1)%(ncol-2))
         
         if nrow > 1 and ncol > 1: 
-            hist_data_out, xedges_out, yedges_out, image_out = axs[row,col].hist2d(
+            ax = figure.add_subplot(fig_specs[row,col])
+            hist_data_out, xedges_out, yedges_out, image_out = ax.hist2d(
                 torsion_val_array[file][:,0],
                 ang_val_array[file][:,0],
                 bins=[torsion_bin_edges,angle_bin_edges],
@@ -568,7 +587,8 @@ def plot_ramachandran(file_list, ang_val_array, torsion_val_array, angle_bin_edg
             )
         
         if ncol > 1 and nrow == 1:
-            hist_data_out, xedges_out, yedges_out, image_out = axs[col].hist2d(
+            ax = figure.add_subplot(fig_specs[row,col])
+            hist_data_out, xedges_out, yedges_out, image_out = ax.hist2d(
                 torsion_val_array[file][:,0],
                 ang_val_array[file][:,0],
                 bins=[torsion_bin_edges,angle_bin_edges],
@@ -578,7 +598,8 @@ def plot_ramachandran(file_list, ang_val_array, torsion_val_array, angle_bin_edg
             )
             
         if ncol == 1 and nrow == 1:
-            hist_data_out, xedges_out, yedges_out, image_out = axs.hist2d(
+            ax = figure.add_subplot(fig_specs[row,col])
+            hist_data_out, xedges_out, yedges_out, image_out = ax.hist2d(
                 torsion_val_array[file][:,0],
                 ang_val_array[file][:,0],
                 bins=[torsion_bin_edges,angle_bin_edges],
@@ -591,41 +612,33 @@ def plot_ramachandran(file_list, ang_val_array, torsion_val_array, angle_bin_edg
         hist_data[file[:-4]] = hist_data_out
         xedges[file[:-4]] = xedges_out
         yedges[file[:-4]] = yedges_out
-        image[file[:-4]] = image_out        
-        
-        # Add colorbar to right side
-        
-        if nrow > 1 and ncol > 1:
-            plt.colorbar(
-                matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap),
-                ax=axs[:,col],
-                shrink=0.6,
-                label='probability density')
-                    
-        if ncol > 1 and nrow == 1:
-            plt.colorbar(
-                matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap),
-                ax=axs[col],
-                shrink=0.6,
-                label='probability density')
-
-        if nrow == 1 and ncol == 1:
-            plt.colorbar(
-                matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap),
-                ax=axs,
-                shrink=0.6,
-                label='probability density')            
+        image[file[:-4]] = image_out               
     
         subplot_id += 1
-        
     
-    # Add common axis labels:
-    # We need to scale the axes spanning all subplots to avoid text overlap
-    ax_common = figure.add_subplot(1, 1, 1, frameon=False)
+    # Add common axis labels to border gridspec axes:
+    ax_west = figure.add_subplot(fig_specs[:,0], frameon=False)
+    ax_east = figure.add_subplot(fig_specs[:,-1], frameon=False)
+    ax_south = figure.add_subplot(fig_specs[-1,1:-1], frameon=False)
     
-    plt.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
-    plt.xlabel("Alpha (degrees)", fontsize=14, labelpad=15)
-    plt.ylabel("Theta (degrees)", fontsize=14, labelpad=15)
+    # Add colorbar to right side:
+    plt.colorbar(
+        matplotlib.cm.ScalarMappable(norm=norm, cmap=cmap),
+        ax=ax_east,
+        shrink=0.5,
+        fraction=1.0,
+        pad=0,
+        label='probability density')       
+    
+    ax_south.set_xlabel("Alpha (degrees)", fontsize=14)
+    ax_south.xaxis.set_label_coords(0.5,0.5)
+    
+    ax_west.set_ylabel("Theta (degrees)", fontsize=14)
+    ax_west.yaxis.set_label_coords(0.5,0.5)
+    
+    ax_east.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
+    ax_west.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
+    ax_south.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
     
     plt.savefig(plotfile)
     plt.close()
