@@ -18,6 +18,7 @@ dependencies:
   - python
   - pyyaml
   - scikit-learn=0.23.1
+  - scikit-learn-extra
   - scipy=1.4.1
   - yaml
 
