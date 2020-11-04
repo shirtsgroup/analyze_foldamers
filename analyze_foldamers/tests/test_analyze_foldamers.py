@@ -10,6 +10,7 @@ import os
 import pickle
 from cg_openmm.cg_model.cgmodel import CGModel
 from analyze_foldamers.ensembles.cluster import *
+from analyze_foldamers.parameters.bond_distributions import *
 from analyze_foldamers.parameters.angle_distributions import *
 
 def test_analyze_foldamers_imported():
@@ -275,10 +276,30 @@ def test_clustering_optics_dcd(tmpdir):
     
     assert os.path.isfile(f"{output_directory}/medoid_0.dcd")   
     assert os.path.isfile(f"{output_directory}/distances_rmsd_hist.pdf") 
+   
+
+def test_bond_dist_calc_pdb(tmpdir):
+    """Test bond distribution calculator"""
     
+    output_directory = tmpdir.mkdir("output")
+    
+    # Load in a trajectory pdb file:
+    traj_file = os.path.join(data_path, "replica_1.pdb")
+
+    # Load in a CGModel:
+    cgmodel_path = os.path.join(data_path, "stored_cgmodel.pkl")
+    cgmodel = pickle.load(open(cgmodel_path, "rb"))
+
+    bond_hist_data = calc_bond_length_distribution(
+        cgmodel,
+        traj_file,
+        plotfile=f"{output_directory}/bond_hist_pdb.pdf",
+    )
+    
+    assert os.path.isfile(f"{output_directory}/bond_hist_pdb.pdf") 
     
 def test_angle_dist_calc_pdb(tmpdir):
-    """Test angle/torsion distribution calculators"""
+    """Test angle distribution calculator"""
     
     output_directory = tmpdir.mkdir("output")
     
@@ -299,7 +320,7 @@ def test_angle_dist_calc_pdb(tmpdir):
     
     
 def test_torsion_dist_calc_pdb(tmpdir):
-    """Test angle/torsion distribution calculators"""
+    """Test torsion distribution calculator"""
     
     output_directory = tmpdir.mkdir("output")
     
@@ -319,8 +340,29 @@ def test_torsion_dist_calc_pdb(tmpdir):
     assert os.path.isfile(f"{output_directory}/torsion_hist_pdb.pdf") 
     
     
+def test_bond_dist_calc_dcd(tmpdir):
+    """Test bond distribution calculator"""
+    
+    output_directory = tmpdir.mkdir("output")
+    
+    # Load in a trajectory pdb file:
+    traj_file = os.path.join(data_path, "replica_1.dcd")
+
+    # Load in a CGModel:
+    cgmodel_path = os.path.join(data_path, "stored_cgmodel.pkl")
+    cgmodel = pickle.load(open(cgmodel_path, "rb"))
+
+    bond_hist_data = calc_bond_length_distribution(
+        cgmodel,
+        traj_file,
+        plotfile=f"{output_directory}/bond_hist_dcd.pdf",
+    )
+    
+    assert os.path.isfile(f"{output_directory}/bond_hist_dcd.pdf") 
+    
+    
 def test_angle_dist_calc_dcd(tmpdir):
-    """Test angle/torsion distribution calculators"""
+    """Test angle distribution calculator"""
     
     output_directory = tmpdir.mkdir("output")
     
@@ -341,7 +383,7 @@ def test_angle_dist_calc_dcd(tmpdir):
     
     
 def test_torsion_dist_calc_dcd(tmpdir):
-    """Test angle/torsion distribution calculators"""
+    """Test torsion distribution calculator"""
     
     output_directory = tmpdir.mkdir("output")
     
