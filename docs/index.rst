@@ -8,12 +8,33 @@ Welcome to analyze_foldamers's documentation!
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Introduction:
 
    getting_started
+   
+.. toctree::
+   :maxdepth: 2
+   :caption: Bonded distributions
+   
+   bonded_distributions
+   
+.. toctree::
+   :maxdepth: 2
+   :caption: Clustering
+   
+   clustering
+   
+.. toctree::
+   :maxdepth: 2
+   :caption: Helical fitting
+   
+   helical
+   
+.. toctree::
+   :maxdepth: 2
+   :caption: API documentation
+   
    api
-
-
 
 Indices and tables
 ==================
