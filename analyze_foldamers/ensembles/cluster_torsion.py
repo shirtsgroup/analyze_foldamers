@@ -76,7 +76,7 @@ def cluster_torsions_KMedoids(
         for j in range(torsion_val_array.shape[0]): 
             delta = np.abs(torsion_val_array[i,:]-torsion_val_array[j,:])
             delta = np.where(delta > 0.5*angle_range, delta-angle_range, delta)
-            torsion_distances[i,j] = np.sqrt(np.pow(delta,powers).sum())
+            torsion_distances[i,j] = np.sqrt(np.power(delta,powers).sum())
     
     # Cluster with sklearn-extra KMedoids
     kmedoids = KMedoids(n_clusters=n_clusters,metric='precomputed').fit(torsion_distances)
