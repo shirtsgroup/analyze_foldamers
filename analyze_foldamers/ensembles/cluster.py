@@ -5,6 +5,7 @@ import numpy as np
 from sklearn.cluster import KMeans, OPTICS, DBSCAN
 from sklearn.cluster import AgglomerativeClustering, SpectralClustering
 from sklearn.metrics import silhouette_score, silhouette_samples
+from analyze_foldamers.parameters.angle_distributions import *
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from cg_openmm.cg_model.cgmodel import CGModel
@@ -17,54 +18,55 @@ def get_cluster_medoid_positions_KMedoids(
     file_list, cgmodel, n_clusters=2,
     frame_start=0, frame_stride=1, frame_end=-1,
     output_format="pdb", output_dir="cluster_output",
-    plot_silhouette=True, plot_rmsd_hist=True, filter=True, filter_ratio=0.05):    
-    
+    plot_silhouette=True, plot_rmsd_hist=True, filter=False, filter_ratio=0.05):    
     """
-        Given PDB or DCD trajectory files and coarse grained model as input, this function performs K-medoids clustering on the poses in trajectory, and returns a list of the coordinates for the medoid pose of each cluster.
+    Given PDB or DCD trajectory files and coarse grained model as input, this function performs K-medoids clustering on the poses in trajectory, and returns a list of the coordinates for the medoid pose of each cluster.
 
-        :param file_list: A list of PDB or DCD files to read and concatenate
-        :type file_list: List( str )
+    :param file_list: A list of PDB or DCD files to read and concatenate
+    :type file_list: List( str )
 
-        :param cgmodel: A CGModel() class object
-        :type cgmodel: class
+    :param cgmodel: A CGModel() class object
+    :type cgmodel: class
 
-        :param n_clusters: The number of clusters for K-medoids algorithm.
-        :type n_clusters: int
+    :param n_clusters: The number of clusters for K-medoids algorithm.
+    :type n_clusters: int
 
-        :param frame_start: First frame in pdb trajectory file to use for clustering.
-        :type frame_start: int
+    :param frame_start: First frame in pdb trajectory file to use for clustering.
+    :type frame_start: int
 
-        :param frame_stride: Advance by this many frames when reading pdb trajectories.
-        :type frame_stride: int
+    :param frame_stride: Advance by this many frames when reading pdb trajectories.
+    :type frame_stride: int
 
-        :param frame_end: Last frame in trajectory file to use for clustering.
-        :type frame_end: int
-        
-        :param output_format: file format extension to write medoid coordinates to (default="pdb"), dcd also supported
-        :type output_format: str
-        
-        :param output_dir: path to which cluster medoid structures and silhouette plots will be saved
-        :type output_dir: str
-        
-        :param plot_silhouette: option to create silhouette plot of clustering results (default=True)
-        :type plot_silhouette: boolean
-        
-        :param plot_rmsd_hist: option to plot a histogram of pairwise rmsd values (post-filtering)
-        :type plot_rmsd_hist: boolean
-        
-        :param filter: option to apply neighborhood radius filtering to remove low-density data
-        :type filter: boolean
-        
-        :param filter_ratio: fraction of data points which pass through the neighborhood radius filter
-        :type filter_ratio: float
-        
-        
-        :returns:
-        - medoid_positions ( np.array( float * unit.angstrom ( n_clusters x num_particles x 3 ) ) ) - A 3D numpy array of poses corresponding to the medoids of all trajectory clusters.
-        - cluster_sizes ( List ( int ) ) - A list of number of members in each cluster 
-        - cluster_rmsd( np.array ( float ) ) - A 1D numpy array of rmsd (in cluster distance space) of samples to cluster centers
-        - silhouette_avg - ( float ) - average silhouette score across all clusters
-        """
+    :param frame_end: Last frame in trajectory file to use for clustering.
+    :type frame_end: int
+    
+    :param output_format: file format extension to write medoid coordinates to (default="pdb"), dcd also supported
+    :type output_format: str
+    
+    :param output_dir: path to which cluster medoid structures and silhouette plots will be saved
+    :type output_dir: str
+    
+    :param plot_silhouette: option to create silhouette plot of clustering results (default=True)
+    :type plot_silhouette: boolean
+    
+    :param plot_rmsd_hist: option to plot a histogram of pairwise rmsd values (post-filtering)
+    :type plot_rmsd_hist: boolean
+    
+    :param filter: option to apply neighborhood radius filtering to remove low-density data (default=False)
+    :type filter: boolean
+    
+    :param filter_ratio: fraction of data points which pass through the neighborhood radius filter (default=0.05)
+    :type filter_ratio: float
+    
+    :returns:
+       - medoid_positions ( np.array( float * unit.angstrom ( n_clusters x num_particles x 3 ) ) ) - A 3D numpy array of poses corresponding to the medoids of all trajectory clusters.
+       - cluster_sizes ( List ( int ) ) - A list of number of members in each cluster 
+       - cluster_rmsd( np.array ( float ) ) - A 1D numpy array of rmsd (in cluster distance space) of samples to cluster centers
+       - silhouette_avg - ( float ) - average silhouette score across all clusters
+    """
+    
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)    
     
     distances, traj_all = get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end)
     
@@ -148,51 +150,54 @@ def get_cluster_medoid_positions_DBSCAN(
     frame_start=0, frame_stride=1, frame_end=-1, output_format="pdb", output_dir="cluster_output",
     plot_silhouette=True, plot_rmsd_hist=True, filter=True, filter_ratio=0.05):
     """
-        Given PDB or DCD trajectory files and coarse grained model as input, this function performs DBSCAN clustering on the poses in the trajectory, and returns a list of the coordinates for the medoid pose of each cluster.
+    Given PDB or DCD trajectory files and coarse grained model as input, this function performs DBSCAN clustering on the poses in the trajectory, and returns a list of the coordinates for the medoid pose of each cluster.
 
-        :param file_list: A list of PDB or DCD files to read and concatenate
-        :type file_list: List( str )
+    :param file_list: A list of PDB or DCD files to read and concatenate
+    :type file_list: List( str )
 
-        :param cgmodel: A CGModel() class object
-        :type cgmodel: class
-        
-        :param min_samples: minimum of number of samples in neighborhood of a point to be considered a core point (includes point itself)
-        :type min_samples: int
-        
-        :param eps: DBSCAN parameter neighborhood distance cutoff
-        :type eps: float
+    :param cgmodel: A CGModel() class object
+    :type cgmodel: class
+    
+    :param min_samples: minimum of number of samples in neighborhood of a point to be considered a core point (includes point itself)
+    :type min_samples: int
+    
+    :param eps: DBSCAN parameter neighborhood distance cutoff
+    :type eps: float
 
-        :param frame_start: First frame in trajectory file to use for clustering.
-        :type frame_start: int
+    :param frame_start: First frame in trajectory file to use for clustering.
+    :type frame_start: int
 
-        :param frame_stride: Advance by this many frames when reading trajectories.
-        :type frame_stride: int
+    :param frame_stride: Advance by this many frames when reading trajectories.
+    :type frame_stride: int
 
-        :param frame_end: Last frame in trajectory file to use for clustering.
-        :type frame_end: int
-        
-        :param output_format: file format extension to write medoid coordinates to (default="pdb"), dcd also supported
-        :type output_format: str
-        
-        :param output_dir: directory to write clustering medoid and plot files
-        :type output_dir: str
-        
-        :param plot_silhouette: option to create silhouette plot(default=True)
-        :type plot_silhouette: boolean
-        
-        :param filter: option to apply neighborhood radius filtering to remove low-density data
-        :type filter: boolean
-        
-        :param filter_ratio: fraction of data points which pass through the neighborhood radius filter
-        :type filter_ratio: float
+    :param frame_end: Last frame in trajectory file to use for clustering.
+    :type frame_end: int
+    
+    :param output_format: file format extension to write medoid coordinates to (default="pdb"), dcd also supported
+    :type output_format: str
+    
+    :param output_dir: directory to write clustering medoid and plot files
+    :type output_dir: str
+    
+    :param plot_silhouette: option to create silhouette plot(default=True)
+    :type plot_silhouette: boolean
+    
+    :param filter: option to apply neighborhood radius filtering to remove low-density data (default=True)
+    :type filter: boolean
+    
+    :param filter_ratio: fraction of data points which pass through the neighborhood radius filter (default=0.05)
+    :type filter_ratio: float
 
-        :returns:
-        - medoid_positions ( np.array( float * unit.angstrom ( n_clusters x num_particles x 3 ) ) ) - A 3D numpy array of poses corresponding to the medoids of all trajectory clusters.
-        - cluster_sizes ( List ( int ) ) - A list of number of members in each cluster 
-        - cluster_rmsd( np.array ( float ) ) - A 1D numpy array of rmsd (in cluster distance space) of samples to cluster centers
-        - n_noise ( int ) - number of points classified as noise
-        - silhouette_avg - ( float ) - average silhouette score across all clusters 
-        """    
+    :returns:
+       - medoid_positions ( np.array( float * unit.angstrom ( n_clusters x num_particles x 3 ) ) ) - A 3D numpy array of poses corresponding to the medoids of all trajectory clusters.
+       - cluster_sizes ( List ( int ) ) - A list of number of members in each cluster 
+       - cluster_rmsd( np.array ( float ) ) - A 1D numpy array of rmsd (in cluster distance space) of samples to cluster centers
+       - n_noise ( int ) - number of points classified as noise
+       - silhouette_avg - ( float ) - average silhouette score across all clusters 
+    """    
+    
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)     
     
     distances, traj_all = get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end)
     
@@ -305,51 +310,54 @@ def get_cluster_medoid_positions_OPTICS(
     frame_start=0, frame_stride=1, frame_end=-1, output_format="pdb", output_dir="cluster_output",
     plot_silhouette=True, plot_rmsd_hist=True, filter=True, filter_ratio=0.05):
     """
-        Given PDB or DCD trajectory files and coarse grained model as input, this function performs OPTICS clustering on the poses in the trajectory, and returns a list of the coordinates for the medoid pose of each cluster.
+    Given PDB or DCD trajectory files and coarse grained model as input, this function performs OPTICS clustering on the poses in the trajectory, and returns a list of the coordinates for the medoid pose of each cluster.
 
-        :param file_list: A list of PDB or DCD files to read and concatenate
-        :type file_list: List( str )
+    :param file_list: A list of PDB or DCD files to read and concatenate
+    :type file_list: List( str )
 
-        :param cgmodel: A CGModel() class object
-        :type cgmodel: class
-        
-        :param min_samples: minimum of number of samples in neighborhood of a point to be considered a core point (includes point itself)
-        :type min_samples: int
-        
-        :param xi: OPTICS parameter for minimum slope on reachability plot signifying a cluster boundary
-        :type xi: float
+    :param cgmodel: A CGModel() class object
+    :type cgmodel: class
+    
+    :param min_samples: minimum of number of samples in neighborhood of a point to be considered a core point (includes point itself)
+    :type min_samples: int
+    
+    :param xi: OPTICS parameter for minimum slope on reachability plot signifying a cluster boundary
+    :type xi: float
 
-        :param frame_start: First frame in trajectory file to use for clustering.
-        :type frame_start: int
+    :param frame_start: First frame in trajectory file to use for clustering.
+    :type frame_start: int
 
-        :param frame_stride: Advance by this many frames when reading trajectories.
-        :type frame_stride: int
+    :param frame_stride: Advance by this many frames when reading trajectories.
+    :type frame_stride: int
 
-        :param frame_end: Last frame in trajectory file to use for clustering.
-        :type frame_end: int
-        
-        :param output_format: file format extension to write medoid coordinates to (default="pdb"), dcd also supported
-        :type output_format: str
-        
-        :param output_dir: directory to write clustering medoid and plot files
-        :type output_dir: str
-        
-        :param plot_silhouette: option to create silhouette plot(default=True)
-        :type plot_silhouette: boolean
-        
-        :param filter: option to apply neighborhood radius filtering to remove low-density data
-        :type filter: boolean
-        
-        :param filter_ratio: fraction of data points which pass through the neighborhood radius filter
-        :type filter_ratio: float
+    :param frame_end: Last frame in trajectory file to use for clustering.
+    :type frame_end: int
+    
+    :param output_format: file format extension to write medoid coordinates to (default="pdb"), dcd also supported
+    :type output_format: str
+    
+    :param output_dir: directory to write clustering medoid and plot files
+    :type output_dir: str
+    
+    :param plot_silhouette: option to create silhouette plot(default=True)
+    :type plot_silhouette: boolean
+    
+    :param filter: option to apply neighborhood radius filtering to remove low-density data (default=True)
+    :type filter: boolean
+    
+    :param filter_ratio: fraction of data points which pass through the neighborhood radius filter (default=0.05)
+    :type filter_ratio: float
 
-        :returns:
-        - medoid_positions ( np.array( float * unit.angstrom ( n_clusters x num_particles x 3 ) ) ) - A 3D numpy array of poses corresponding to the medoids of all trajectory clusters.
-        - cluster_sizes ( List ( int ) ) - A list of number of members in each cluster 
-        - cluster_rmsd( np.array ( float ) ) - A 1D numpy array of rmsd (in cluster distance space) of samples to cluster centers
-        - n_noise ( int ) - number of points classified as noise
-        - silhouette_avg - ( float ) - average silhouette score across all clusters 
-        """    
+    :returns:
+       - medoid_positions ( np.array( float * unit.angstrom ( n_clusters x num_particles x 3 ) ) ) - A 3D numpy array of poses corresponding to the medoids of all trajectory clusters.
+       - cluster_sizes ( List ( int ) ) - A list of number of members in each cluster 
+       - cluster_rmsd( np.array ( float ) ) - A 1D numpy array of rmsd (in cluster distance space) of samples to cluster centers
+       - n_noise ( int ) - number of points classified as noise
+       - silhouette_avg - ( float ) - average silhouette score across all clusters 
+    """    
+    
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)     
     
     distances, traj_all = get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end)
     
@@ -470,9 +478,9 @@ def filter_distances(distances, filter_ratio=0.05):
     :type filter_ratio: float
     
     :returns:
-        - distances_filtered (2d numpy array) - distance matrix of data points satisfying filter parameters
-        - neighbors_dense (1d numpy array) - indices of the original dataset which satisfy filter parameters
-        - filter_ratio (float) - fraction of data remaining after filtering
+       - distances_filtered (2d numpy array) - distance matrix of data points satisfying filter parameters
+       - neighbors_dense (1d numpy array) - indices of the original dataset which satisfy filter parameters
+       - filter_ratio (float) - fraction of data remaining after filtering
     """
     
     filter_ratio_target = filter_ratio
@@ -494,8 +502,8 @@ def filter_distances(distances, filter_ratio=0.05):
         return (filter_ratio-filter_ratio_target)**2
     
     # Optimize cutoff_radius, density_cutoff parameters to get desired filter ratio
-    
-    x0 = [0.05, 5]
+    # A value of 0.05 is reasonable for rmsd distances, 75 is reasonable for torsion n-dimensional euclidean distances
+    x0 = [75, 5]
     
     results = minimize(get_filter_ratio, x0, method='Nelder-Mead')
     
@@ -610,7 +618,7 @@ def make_cluster_distance_plots(n_clusters,cluster_fit,dist_to_centroids,plotfil
     plt.tight_layout()
     plt.savefig(plotfile)
     
-            
+     
 def get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end):
     """Internal function for reading trajectory files and computing rmsd"""
     
@@ -672,7 +680,6 @@ def write_medoids_to_file(cgmodel, medoid_positions, output_dir, output_format):
     return
         
     
-    
 def make_silhouette_plot(
     cluster_fit, silhouette_sample_values, silhouette_avg,
     n_clusters, cluster_rmsd, cluster_sizes, plotfile):
@@ -722,18 +729,18 @@ def make_silhouette_plot(
     
 def concatenate_trajectories(pdb_file_list, combined_pdb_file="combined.pdb"):
     """
-        Given a list of PDB files, this function reads their coordinates, concatenates them, and saves the combined coordinates to a new file (useful for clustering with MSMBuilder).
+    Given a list of PDB files, this function reads their coordinates, concatenates them, and saves the combined coordinates to a new file (useful for clustering with MSMBuilder).
 
-        :param pdb_file_list: A list of PDB files to read and concatenate
-        :type pdb_file_list: List( str )
+    :param pdb_file_list: A list of PDB files to read and concatenate
+    :type pdb_file_list: List( str )
 
-        :param combined_pdb_file: The name of file/path in which to save a combined version of the PDB files, default = "combined.pdb"
-        :type combined_pdb_file: str
+    :param combined_pdb_file: The name of file/path in which to save a combined version of the PDB files, default = "combined.pdb"
+    :type combined_pdb_file: str
 
-        :returns:
-          - combined_pdb_file ( str ) - The name/path for a file within which the concatenated coordinates will be written.
-
-        """
+    :returns:
+       - combined_pdb_file ( str ) - The name/path for a file within which the concatenated coordinates will be written.
+    """
+    
     traj_list = []
     for pdb_file in pdb_file_list:
         traj = md.load(pdb_file)
@@ -743,18 +750,17 @@ def concatenate_trajectories(pdb_file_list, combined_pdb_file="combined.pdb"):
 
 def align_structures(reference_traj, target_traj):
     """
-        Given a reference trajectory, this function performs a structural alignment for a second input trajectory, with respect to the reference.
+    Given a reference trajectory, this function performs a structural alignment for a second input trajectory, with respect to the reference.
 
-        :param reference_traj: The trajectory to use as a reference for alignment.
-        :type reference_traj: `MDTraj() trajectory <http://mdtraj.org/1.6.2/api/generated/mdtraj.Trajectory.html>`_
+    :param reference_traj: The trajectory to use as a reference for alignment.
+    :type reference_traj: `MDTraj() trajectory <http://mdtraj.org/1.6.2/api/generated/mdtraj.Trajectory.html>`_
 
-        :param target_traj: The trajectory to align with the reference.
-        :type target_traj: `MDTraj() trajectory <http://mdtraj.org/1.6.2/api/generated/mdtraj.Trajectory.html>`_
+    :param target_traj: The trajectory to align with the reference.
+    :type target_traj: `MDTraj() trajectory <http://mdtraj.org/1.6.2/api/generated/mdtraj.Trajectory.html>`_
 
-        :returns:
-          - aligned_target_traj ( `MDTraj() trajectory <http://mdtraj.org/1.6.2/api/generated/mdtraj.Trajectory.html>`_ ) - The coordinates for the aligned trajectory.
-
-        """
+    :returns:
+       - aligned_target_traj ( `MDTraj() trajectory <http://mdtraj.org/1.6.2/api/generated/mdtraj.Trajectory.html>`_ ) - The coordinates for the aligned trajectory.
+    """
 
     aligned_target_traj = target_traj.superpose(reference_traj)
 

@@ -20,7 +20,7 @@ def cluster_torsions_KMedoids(
     frame_start=0, frame_stride=1, frame_end=-1,
     output_format="pdb", output_dir="cluster_output",
     backbone_torsion_type="bb_bb_bb_bb",
-    plot_silhouette=True):
+    filter=False, filter_ratio=0.05, plot_silhouette=True, plot_distance_hist=True):
     """
     Given PDB or DCD trajectory files and coarse grained model as input, this function performs K-medoids clustering on the poses in trajectory, and returns a list of the coordinates for the medoid pose of each cluster.
 
@@ -48,23 +48,35 @@ def cluster_torsions_KMedoids(
     :param output_dir: path to which cluster medoid structures and silhouette plots will be saved
     :type output_dir: str
     
+    :param backbone_torsion_type: particle sequence of the backbone torsions (default="bb_bb_bb_bb") - for now only single sequence permitted
+    :type backbone_torsion_type: str
+    
+    :param filter: option to apply neighborhood radius filtering to remove low-density data (default=False)
+    :type filter: boolean
+    
+    :param filter_ratio: fraction of data points which pass through the neighborhood radius filter (default=0.05)
+    :type filter_ratio: float
+    
     :param plot_silhouette: option to create silhouette plot of clustering results (default=True)
     :type plot_silhouette: boolean
     
-    :param plot_rmsd_hist: option to plot a histogram of pairwise rmsd values (post-filtering)
-    :type plot_rmsd_hist: boolean
+    :param plot_torsion_hist: option to plot a histogram of torsion euclidean distances (post-filtering)
+    :type plot_torsion_hist: boolean
     
     :returns:
        - medoid_positions ( np.array( float * unit.angstrom ( n_clusters x num_particles x 3 ) ) ) - A 3D numpy array of poses corresponding to the medoids of all trajectory clusters.
+       - medoid torsions ( np.array ( float * unit.degrees ( n_clusters x n_torsion ) - A 2D numpy array of the backbone torsion angles for each cluster medoid
        - cluster_sizes ( List ( int ) ) - A list of number of members in each cluster 
        - cluster_rmsd( np.array ( float ) ) - A 1D numpy array of rmsd (in cluster distance space) of samples to cluster centers
        - silhouette_avg - ( float ) - average silhouette score across all clusters
     """  
     
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
     
     torsion_val_array, traj_all = get_torsion_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end, backbone_torsion_type)
     
-    # We need to precompute the euclidean distance matrix, accounting for periodic boundaries 
+    # We need to precompute the euclidean distance matrix, accounting for periodic boundaries
     
     total = 0
     angle_range = np.full(torsion_val_array.shape[1],360)
@@ -77,7 +89,28 @@ def cluster_torsions_KMedoids(
             delta = np.abs(torsion_val_array[i,:]-torsion_val_array[j,:])
             delta = np.where(delta > 0.5*angle_range, delta-angle_range, delta)
             torsion_distances[i,j] = np.sqrt(np.power(delta,powers).sum())
-    
+            
+    if filter:
+        # Filter distances:
+        torsion_distances, dense_indices, filter_ratio_actual = \
+            filter_distances(torsion_distances, filter_ratio=filter_ratio)
+        
+        traj_all = traj_all[dense_indices]
+     
+    if plot_distance_hist:
+        distances_row = np.reshape(torsion_distances, (torsion_distances.shape[0]*torsion_distances.shape[1],1))
+        
+        # Remove the diagonal 0 elements:
+        distances_row = distances_row[distances_row != 0]
+        
+        figure = plt.figure()
+        n_out, bin_edges_out, patch = plt.hist(
+            distances_row, bins=1000,density=True)
+        plt.xlabel('rmsd')
+        plt.ylabel('probability density')
+        plt.savefig(f'{output_dir}/torsion_distances_hist.pdf')
+        plt.close()  
+        
     # Cluster with sklearn-extra KMedoids
     kmedoids = KMedoids(n_clusters=n_clusters,metric='precomputed').fit(torsion_distances)
 
@@ -122,8 +155,8 @@ def cluster_torsions_KMedoids(
         cluster_rmsd[k] = np.sqrt(cluster_rmsd[k])  
 
     # Get silhouette scores
-    silhouette_avg = silhouette_score(torsion_val_array, kmedoids.labels_)
-    silhouette_sample_values = silhouette_samples(torsion_val_array, kmedoids.labels_)
+    silhouette_avg = silhouette_score(torsion_distances, kmedoids.labels_)
+    silhouette_sample_values = silhouette_samples(torsion_distances, kmedoids.labels_)
     
     if plot_silhouette:
         # Plot silhouette analysis
@@ -143,45 +176,61 @@ def cluster_torsions_DBSCAN(
     backbone_torsion_type="bb_bb_bb_bb",
     filter=True, filter_ratio=0.05, plot_silhouette=True, plot_distance_hist=True):
     """
-        Given PDB or DCD trajectory files and coarse grained model as input, this function performs DBSCAN clustering on the poses in the trajectory, and returns a list of the coordinates for the medoid pose of each cluster.
+    Given PDB or DCD trajectory files and coarse grained model as input, this function performs DBSCAN clustering on the poses in the trajectory, and returns a list of the coordinates for the medoid pose of each cluster.
 
-        :param file_list: A list of PDB or DCD files to read and concatenate
-        :type file_list: List( str )
+    :param file_list: A list of PDB or DCD files to read and concatenate
+    :type file_list: List( str )
 
-        :param cgmodel: A CGModel() class object
-        :type cgmodel: class
-        
-        :param min_samples: minimum of number of samples in neighborhood of a point to be considered a core point (includes point itself)
-        :type min_samples: int
-        
-        :param eps: DBSCAN parameter neighborhood distance cutoff
-        :type eps: float
+    :param cgmodel: A CGModel() class object
+    :type cgmodel: class
+    
+    :param min_samples: minimum of number of samples in neighborhood of a point to be considered a core point (includes point itself)
+    :type min_samples: int
+    
+    :param eps: DBSCAN parameter neighborhood distance cutoff
+    :type eps: float
 
-        :param frame_start: First frame in trajectory file to use for clustering.
-        :type frame_start: int
+    :param frame_start: First frame in trajectory file to use for clustering.
+    :type frame_start: int
 
-        :param frame_stride: Advance by this many frames when reading trajectories.
-        :type frame_stride: int
+    :param frame_stride: Advance by this many frames when reading trajectories.
+    :type frame_stride: int
 
-        :param frame_end: Last frame in trajectory file to use for clustering.
-        :type frame_end: int
-        
-        :param output_format: file format extension to write medoid coordinates to (default="pdb"), dcd also supported
-        :type output_format: str
-        
-        :param output_dir: directory to write clustering medoid and plot files
-        :type output_dir: str
-        
-        :param plot_silhouette: option to create silhouette plot(default=True)
-        :type plot_silhouette: boolean
+    :param frame_end: Last frame in trajectory file to use for clustering.
+    :type frame_end: int
+    
+    :param output_format: file format extension to write medoid coordinates to (default="pdb"), dcd also supported
+    :type output_format: str
+    
+    :param output_dir: directory to write clustering medoid and plot files
+    :type output_dir: str
+    
+    :param backbone_torsion_type: particle sequence of the backbone torsions (default="bb_bb_bb_bb") - for now only single sequence permitted
+    :type backbone_torsion_type: str    
+    
+    :param filter: option to apply neighborhood radius filtering to remove low-density data (default=True)
+    :type filter: boolean
+    
+    :param filter_ratio: fraction of data points which pass through the neighborhood radius filter (default=0.05)
+    :type filter_ratio: float
+    
+    :param plot_silhouette: option to create silhouette plot of clustering results (default=True)
+    :type plot_silhouette: boolean
+    
+    :param plot_torsion_hist: option to plot a histogram of torsion euclidean distances (post-filtering)
+    :type plot_torsion_hist: boolean
 
-        :returns:
-        - medoid_positions ( np.array( float * unit.angstrom ( n_clusters x num_particles x 3 ) ) ) - A 3D numpy array of poses corresponding to the medoids of all trajectory clusters.
-        - cluster_sizes ( List ( int ) ) - A list of number of members in each cluster 
-        - cluster_rmsd( np.array ( float ) ) - A 1D numpy array of rmsd (in cluster distance space) of samples to cluster centers
-        - n_noise ( int ) - number of points classified as noise
-        - silhouette_avg - ( float ) - average silhouette score across all clusters 
-        """    
+    :returns:
+       - medoid_positions ( np.array( float * unit.angstrom ( n_clusters x num_particles x 3 ) ) ) - A 3D numpy array of poses corresponding to the medoids of all trajectory clusters.
+       - medoid torsions ( np.array ( float * unit.degrees ( n_clusters x n_torsion ) - A 2D numpy array of the backbone torsion angles for each cluster medoid
+       - cluster_sizes ( List ( int ) ) - A list of number of members in each cluster 
+       - cluster_rmsd( np.array ( float ) ) - A 1D numpy array of rmsd (in cluster distance space) of samples to cluster centers
+       - n_noise ( int ) - number of points classified as noise
+       - silhouette_avg - ( float ) - average silhouette score across all clusters 
+    """    
+    
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
     
     torsion_val_array, traj_all = get_torsion_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end, backbone_torsion_type)
     
@@ -288,7 +337,7 @@ def cluster_torsions_DBSCAN(
     
     # Get silhouette scores
     try:
-        silhouette_sample_values = silhouette_samples(torsion_distances_k, labels)
+        silhouette_sample_values = silhouette_samples(torsion_distances, labels)
         silhouette_avg = np.mean(silhouette_sample_values[labels!=-1])
     
         if plot_silhouette:
