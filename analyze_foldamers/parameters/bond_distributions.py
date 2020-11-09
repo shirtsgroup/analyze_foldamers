@@ -82,8 +82,8 @@ def calc_bond_length_distribution(
     :param cgmodel: CGModel() object
     :type cgmodel: class
     
-    :param file: path to pdb or dcd trajectory file
-    :type file: str
+    :param file_list: path to pdb or dcd trajectory file(s)
+    :type file_list: str or list(str)
     
     :param nbins: number of histogram bins
     :type nbins: int
@@ -97,7 +97,7 @@ def calc_bond_length_distribution(
     :param frame_end: Last frame in trajectory file to use for analysis.
     :type frame_end: int
     
-    :param plot_per_page: number of subplots to display on each page
+    :param plot_per_page: number of subplots to display on each page (default=2)
     :type plot_per_page: int
     
     :param plotfile: filename for saving bond length distribution pdf plots

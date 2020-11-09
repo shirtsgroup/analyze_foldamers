@@ -104,6 +104,8 @@ def plot_distribution(
                 if ylim != None:
                     plt.ylim(ylim[0],ylim[1])
                 
+                if xlabel != None:
+                    plt.xlabel(xlabel)                
                 if ylabel != None:
                     plt.ylabel(ylabel)
                         
@@ -113,8 +115,8 @@ def plot_distribution(
                     # Save and close previous page
                     
                     # Use xlabels for bottom row only:
-                    if xlabel != None:
-                        plt.xlabel(xlabel)
+                    # if xlabel != None:
+                        # plt.xlabel(xlabel)
                     
                     # Adjust subplot spacing
                     plt.subplots_adjust(hspace=0.3)
@@ -159,6 +161,8 @@ def plot_distribution(
                 if ylim != None:
                     plt.ylim(ylim[0],ylim[1])
                 
+                if xlabel != None:
+                    plt.xlabel(xlabel)
                 if ylabel != None:
                     plt.ylabel(ylabel)
                         
@@ -168,8 +172,8 @@ def plot_distribution(
                     # Save and close previous page
                     
                     # Use xlabels for bottom row only:
-                    if xlabel != None:
-                        plt.xlabel(xlabel)
+                    # if xlabel != None:
+                        # plt.xlabel(xlabel)
                     
                     # Adjust subplot spacing
                     plt.subplots_adjust(hspace=0.3)
