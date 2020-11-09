@@ -73,7 +73,8 @@ def assign_bond_types(cgmodel, bond_list):
     
     
 def calc_bond_length_distribution(
-    cgmodel, file, nbins=90, frame_start=0, frame_stride=1, frame_end=-1, plotfile="bond_hist.pdf"
+    cgmodel, file_list, nbins=90, frame_start=0, frame_stride=1, frame_end=-1,
+    plot_per_page=2, plotfile="bond_hist.pdf"
     ):
     """
     Calculate and plot all bond length distributions from a CGModel object and trajectory
@@ -96,53 +97,67 @@ def calc_bond_length_distribution(
     :param frame_end: Last frame in trajectory file to use for analysis.
     :type frame_end: int
     
+    :param plot_per_page: number of subplots to display on each page
+    :type plot_per_page: int
+    
     :param plotfile: filename for saving bond length distribution pdf plots
     :type plotfile: str
     
-    """
+    """   
     
-    # Load in a trajectory file:
-    if file[-3:] == 'dcd':
-        traj = md.load(file,top=md.Topology.from_openmm(cgmodel.topology))
-    else:
-        traj = md.load(file)
-        
-    # Select frames for analysis:    
-    if frame_end == -1:
-        frame_end = traj.n_frames
+    # Convert file_list to list if a single string:
+    if type(file_list) == str:
+        # Single file
+        file_list = file_list.split()    
+    
+    # Create dictionary for saving bond histogram data:
+    bond_hist_data = {}
 
-    traj = traj[frame_start:frame_end:frame_stride]   
-    
-    nframes = traj.n_frames
-    
     # Get bond list
     bond_list = CGModel.get_bond_list(cgmodel)
     
     # Assign bond types:
     bond_types, bond_array, bond_sub_arrays, n_i, i_bond_type, bond_dict, inv_bond_dict = \
         assign_bond_types(cgmodel, bond_list)
-         
-    # Create dictionary for saving bond histogram data:
-    bond_hist_data = {}
+    
+    for file in file_list:
+    
+        # Load in a trajectory file:
+        if file[-3:] == 'dcd':
+            traj = md.load(file,top=md.Topology.from_openmm(cgmodel.topology))
+        else:
+            traj = md.load(file)
             
-    for i in range(i_bond_type):
-        # Compute all bond distances in trajectory
-        # This returns an [nframes x n_bonds] array
-        bond_val_array = md.compute_distances(traj,bond_sub_arrays[str(i+1)])
+        # Select frames for analysis:    
+        if frame_end == -1:
+            frame_end = traj.n_frames
+
+        traj = traj[frame_start:frame_end:frame_stride]   
         
-        # Reshape arrays:  
-        bond_val_array = np.reshape(bond_val_array, (nframes*n_i[i][0],1))
-        
-        # Histogram and plot results:
-        n_out, bin_edges_out = np.histogram(
-            bond_val_array, bins=nbins, density=True)
-        
-        bond_bin_centers = np.zeros((len(bin_edges_out)-1,1))
-        for j in range(len(bin_edges_out)-1):
-            bond_bin_centers[j] = (bin_edges_out[j]+bin_edges_out[j+1])/2   
-        
-        bond_hist_data[f"{inv_bond_dict[str(i+1)]}_density"]=n_out
-        bond_hist_data[f"{inv_bond_dict[str(i+1)]}_bin_centers"]=bond_bin_centers
+        nframes = traj.n_frames
+            
+        # Created inner dictionary for current file:
+        # ***TODO: make this more general to file names other than 'output/state_i.dcd' form
+        bond_hist_data[file[7:-4]] = {}
+                
+        for i in range(i_bond_type):
+            # Compute all bond distances in trajectory
+            # This returns an [nframes x n_bonds] array
+            bond_val_array = md.compute_distances(traj,bond_sub_arrays[str(i+1)])
+            
+            # Reshape arrays:  
+            bond_val_array = np.reshape(bond_val_array, (nframes*n_i[i][0],1))
+            
+            # Histogram and plot results:
+            n_out, bin_edges_out = np.histogram(
+                bond_val_array, bins=nbins, density=True)
+            
+            bond_bin_centers = np.zeros((len(bin_edges_out)-1,1))
+            for j in range(len(bin_edges_out)-1):
+                bond_bin_centers[j] = (bin_edges_out[j]+bin_edges_out[j+1])/2   
+            
+            bond_hist_data[file[7:-4]][f"{inv_bond_dict[str(i+1)]}_density"]=n_out
+            bond_hist_data[file[7:-4]][f"{inv_bond_dict[str(i+1)]}_bin_centers"]=bond_bin_centers
         
     plot_distribution(
         inv_bond_dict,
@@ -151,7 +166,7 @@ def calc_bond_length_distribution(
         ylabel="Probability density",
         figure_title="Bond distributions",
         file_name=f"{plotfile}",
-        marker_string='o-r',
+        plot_per_page=plot_per_page,
     )
         
     return bond_hist_data
