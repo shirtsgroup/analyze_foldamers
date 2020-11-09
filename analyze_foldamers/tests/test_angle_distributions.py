@@ -87,7 +87,7 @@ def test_bond_dist_calc_dcd(tmpdir):
     
     output_directory = tmpdir.mkdir("output")
     
-    # Load in a trajectory pdb file:
+    # Load in a trajectory dcd file:
     traj_file = os.path.join(data_path, "replica_1.dcd")
 
     # Load in a CGModel:
@@ -101,6 +101,29 @@ def test_bond_dist_calc_dcd(tmpdir):
     )
     
     assert os.path.isfile(f"{output_directory}/bond_hist_dcd.pdf") 
+    
+    
+def test_bond_dist_calc_dcd_multi(tmpdir):
+    """Test bond distribution calculator"""
+    
+    output_directory = tmpdir.mkdir("output")
+    
+    # Load in trajectory dcd files:
+    traj_file_list = []
+    for i in range(3):
+        traj_file_list.append(os.path.join(data_path, f"replica_{i+1}.dcd"))
+
+    # Load in a CGModel:
+    cgmodel_path = os.path.join(data_path, "stored_cgmodel.pkl")
+    cgmodel = pickle.load(open(cgmodel_path, "rb"))
+
+    bond_hist_data = calc_bond_length_distribution(
+        cgmodel,
+        traj_file_list,
+        plotfile=f"{output_directory}/bond_hist_dcd.pdf",
+    )
+    
+    assert os.path.isfile(f"{output_directory}/bond_hist_dcd.pdf")     
     
     
 def test_angle_dist_calc_dcd(tmpdir):
@@ -124,6 +147,29 @@ def test_angle_dist_calc_dcd(tmpdir):
     assert os.path.isfile(f"{output_directory}/angle_hist_dcd.pdf") 
     
     
+def test_angle_dist_calc_dcd_multi(tmpdir):
+    """Test angle distribution calculator"""
+    
+    output_directory = tmpdir.mkdir("output")
+    
+    # Load in trajectory dcd files:
+    traj_file_list = []
+    for i in range(3):
+        traj_file_list.append(os.path.join(data_path, f"replica_{i+1}.dcd"))
+
+    # Load in a CGModel:
+    cgmodel_path = os.path.join(data_path, "stored_cgmodel.pkl")
+    cgmodel = pickle.load(open(cgmodel_path, "rb"))
+
+    angle_hist_data = calc_bond_angle_distribution(
+        cgmodel,
+        traj_file_list,
+        plotfile=f"{output_directory}/angle_hist_dcd.pdf",
+    )
+    
+    assert os.path.isfile(f"{output_directory}/angle_hist_dcd.pdf")     
+    
+    
 def test_torsion_dist_calc_dcd(tmpdir):
     """Test torsion distribution calculator"""
     
@@ -144,6 +190,29 @@ def test_torsion_dist_calc_dcd(tmpdir):
     
     assert os.path.isfile(f"{output_directory}/torsion_hist_dcd.pdf") 
 
+
+def test_torsion_dist_calc_dcd_multi(tmpdir):
+    """Test torsion distribution calculator"""
+    
+    output_directory = tmpdir.mkdir("output")
+    
+    # Load in trajectory dcd files:
+    traj_file_list = []
+    for i in range(3):
+        traj_file_list.append(os.path.join(data_path, f"replica_{i+1}.dcd"))
+
+    # Load in a CGModel:
+    cgmodel_path = os.path.join(data_path, "stored_cgmodel.pkl")
+    cgmodel = pickle.load(open(cgmodel_path, "rb"))
+    
+    torsion_hist_data = calc_torsion_distribution(
+        cgmodel,
+        traj_file_list,
+        plotfile=f"{output_directory}/torsion_hist_dcd.pdf",
+    )
+    
+    assert os.path.isfile(f"{output_directory}/torsion_hist_dcd.pdf")     
+    
     
 def test_ramachandran_calc_pdb(tmpdir):
     """Test ramachandran calculation/plotting"""
