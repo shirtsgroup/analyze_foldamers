@@ -503,7 +503,7 @@ def filter_distances(distances, filter_ratio=0.05):
     
     # Optimize cutoff_radius, density_cutoff parameters to get desired filter ratio
     # A value of 0.05 is reasonable for rmsd distances, 75 is reasonable for torsion n-dimensional euclidean distances
-    x0 = [75, 5]
+    x0 = [np.mean(distances)/2, 5]
     
     results = minimize(get_filter_ratio, x0, method='Nelder-Mead')
     
