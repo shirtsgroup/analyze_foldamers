@@ -86,6 +86,16 @@ def plot_distribution(
                 n_files = len(list(hist_data.keys()))
                 
                 for file_key, file_value in hist_data.items():
+                    # Check if file key is a temperature:
+                    if any(c.isalpha() for c in file_key):
+                        # use filename as label
+                        if len(file_key) > 12:
+                            # Truncate long file paths
+                            label = "..." + file_key[-12:]
+                        else:
+                            label = file_key
+                    else:
+                        label = file_key + " K"
                     color = cm.nipy_spectral(c/n_files)
                     plt.plot(
                         hist_data[file_key][f"{value}_bin_centers"],
@@ -93,7 +103,7 @@ def plot_distribution(
                         marker_string,
                         linewidth=linewidth,
                         markersize=markersize,
-                        label=file_key,
+                        label=label,
                         color=color,
                     )
                     c += 1

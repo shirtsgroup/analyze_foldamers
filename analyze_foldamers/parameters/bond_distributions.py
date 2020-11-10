@@ -74,7 +74,7 @@ def assign_bond_types(cgmodel, bond_list):
     
 def calc_bond_length_distribution(
     cgmodel, file_list, nbins=90, frame_start=0, frame_stride=1, frame_end=-1,
-    plot_per_page=2, plotfile="bond_hist.pdf"
+    plot_per_page=2, temperature_list=None, plotfile="bond_hist.pdf"
     ):
     """
     Calculate and plot all bond length distributions from a CGModel object and trajectory
@@ -100,6 +100,9 @@ def calc_bond_length_distribution(
     :param plot_per_page: number of subplots to display on each page (default=2)
     :type plot_per_page: int
     
+    :param temperature_list: list of temperatures corresponding to file_list. If None, file names will be the plot labels.
+    :type temperature_list: list(Quantity())
+    
     :param plotfile: filename for saving bond length distribution pdf plots
     :type plotfile: str
     
@@ -120,8 +123,8 @@ def calc_bond_length_distribution(
     bond_types, bond_array, bond_sub_arrays, n_i, i_bond_type, bond_dict, inv_bond_dict = \
         assign_bond_types(cgmodel, bond_list)
     
+    file_index = 0
     for file in file_list:
-    
         # Load in a trajectory file:
         if file[-3:] == 'dcd':
             traj = md.load(file,top=md.Topology.from_openmm(cgmodel.topology))
@@ -136,9 +139,13 @@ def calc_bond_length_distribution(
         
         nframes = traj.n_frames
             
-        # Created inner dictionary for current file:
-        # ***TODO: make this more general to file names other than 'output/state_i.dcd' form
-        bond_hist_data[file[7:-4]] = {}
+        # Create inner dictionary for current file:
+        if temperature_list is not None:
+            file_key = f"{temperature_list[file_index].value_in_unit(unit.kelvin):.2f}" 
+        else:
+            file_key = file[:-4]
+            
+        bond_hist_data[file_key] = {}
                 
         for i in range(i_bond_type):
             # Compute all bond distances in trajectory
@@ -156,8 +163,10 @@ def calc_bond_length_distribution(
             for j in range(len(bin_edges_out)-1):
                 bond_bin_centers[j] = (bin_edges_out[j]+bin_edges_out[j+1])/2   
             
-            bond_hist_data[file[7:-4]][f"{inv_bond_dict[str(i+1)]}_density"]=n_out
-            bond_hist_data[file[7:-4]][f"{inv_bond_dict[str(i+1)]}_bin_centers"]=bond_bin_centers
+            bond_hist_data[file_key][f"{inv_bond_dict[str(i+1)]}_density"]=n_out
+            bond_hist_data[file_key][f"{inv_bond_dict[str(i+1)]}_bin_centers"]=bond_bin_centers
+        
+        file_index += 1
         
     plot_distribution(
         inv_bond_dict,

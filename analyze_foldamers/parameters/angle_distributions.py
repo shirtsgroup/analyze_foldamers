@@ -145,7 +145,7 @@ def assign_torsion_types(cgmodel, torsion_list):
 
 def calc_bond_angle_distribution(
     cgmodel, file_list, nbins=90, frame_start=0, frame_stride=1, frame_end=-1, 
-    plot_per_page=2, plotfile="angle_hist.pdf"
+    plot_per_page=2, temperature_list=None, plotfile="angle_hist.pdf"
     ):
     """
     Calculate and plot all bond angle distributions from a CGModel object and pdb trajectory
@@ -170,6 +170,9 @@ def calc_bond_angle_distribution(
     
     :param plot_per_page: number of subplots to display on each page (default=2)
     :type plot_per_page: int    
+    
+    :param temperature_list: list of temperatures corresponding to file_list. If None, file names will be the plot labels.
+    :type temperature_list: list(Quantity())
     
     :param plotfile: Base filename for saving bond angle distribution pdf plots
     :type plotfile: str
@@ -197,6 +200,7 @@ def calc_bond_angle_distribution(
     for i in range(len(angle_bin_edges)-1):
         angle_bin_centers[i] = (angle_bin_edges[i]+angle_bin_edges[i+1])/2    
     
+    file_index = 0
     for file in file_list:
         # Load in a trajectory file:
         if file[-3:] == 'dcd':
@@ -213,8 +217,12 @@ def calc_bond_angle_distribution(
         nframes = traj.n_frames   
          
         # Create inner dictionary for current file:
-        # ***TODO: make this more general to file names other than 'output/state_i.dcd' form
-        angle_hist_data[file[7:-4]] = {}
+        if temperature_list is not None:
+            file_key = f"{temperature_list[file_index].value_in_unit(unit.kelvin):.2f}" 
+        else:
+            file_key = file[:-4]
+            
+        angle_hist_data[file_key] = {}
          
         for i in range(i_angle_type):
             # Compute all angle values in trajectory
@@ -230,8 +238,10 @@ def calc_bond_angle_distribution(
                 ang_val_array, bins=angle_bin_edges,density=True)
                 
             
-            angle_hist_data[file[7:-4]][f"{inv_ang_dict[str(i+1)]}_density"]=n_out
-            angle_hist_data[file[7:-4]][f"{inv_ang_dict[str(i+1)]}_bin_centers"]=angle_bin_centers
+            angle_hist_data[file_key][f"{inv_ang_dict[str(i+1)]}_density"]=n_out
+            angle_hist_data[file_key][f"{inv_ang_dict[str(i+1)]}_bin_centers"]=angle_bin_centers
+        
+        file_index += 1
         
     plot_distribution(
         inv_ang_dict,
@@ -249,7 +259,7 @@ def calc_bond_angle_distribution(
     
 def calc_torsion_distribution(
     cgmodel, file_list, nbins=180, frame_start=0, frame_stride=1, frame_end=-1,
-    plot_per_page=2, plotfile="torsion_hist.pdf"
+    plot_per_page=2, temperature_list=None, plotfile="torsion_hist.pdf"
     ):
     """
     Calculate and plot all torsion distributions from a CGModel object and pdb or dcd trajectory
@@ -274,6 +284,9 @@ def calc_torsion_distribution(
     
     :param plot_per_page: number of subplots to display on each page (default=2)
     :type plot_per_page: int   
+    
+    :param temperature_list: list of temperatures corresponding to file_list. If None, file names will be the plot labels.
+    :type temperature_list: list(Quantity())
     
     :param plotfile: Base filename for saving torsion distribution pdf plots
     :type plotfile: str
@@ -300,6 +313,7 @@ def calc_torsion_distribution(
     for i in range(len(torsion_bin_edges)-1):
         torsion_bin_centers[i] = (torsion_bin_edges[i]+torsion_bin_edges[i+1])/2
         
+    file_index = 0    
     for file in file_list:
         # Load in a trajectory file:
         if file[-3:] == 'dcd':
@@ -316,9 +330,13 @@ def calc_torsion_distribution(
         nframes = traj.n_frames    
         
         # Create inner dictionary for current file:
-        # ***TODO: make this more general to file names other than 'output/state_i.dcd' form
-        torsion_hist_data[file[7:-4]] = {}
+        if temperature_list is not None:
+            file_key = f"{temperature_list[file_index].value_in_unit(unit.kelvin):.2f}" 
+        else:
+            file_key = file[:-4]
             
+        torsion_hist_data[file_key] = {}
+        
         for i in range(i_torsion_type):
             # Compute all torsion values in trajectory
             # This returns an [nframes x n_torsions] array
@@ -332,8 +350,10 @@ def calc_torsion_distribution(
             n_out, bin_edges_out = np.histogram(
                 torsion_val_array, bins=torsion_bin_edges,density=True)
             
-            torsion_hist_data[file[7:-4]][f"{inv_torsion_dict[str(i+1)]}_density"]=n_out
-            torsion_hist_data[file[7:-4]][f"{inv_torsion_dict[str(i+1)]}_bin_centers"]=torsion_bin_centers  
+            torsion_hist_data[file_key][f"{inv_torsion_dict[str(i+1)]}_density"]=n_out
+            torsion_hist_data[file_key][f"{inv_torsion_dict[str(i+1)]}_bin_centers"]=torsion_bin_centers  
+      
+        file_index += 1
       
     plot_distribution(
         inv_torsion_dict,
