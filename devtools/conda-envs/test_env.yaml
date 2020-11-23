@@ -25,5 +25,6 @@ dependencies:
   # Pip-only installs
   - pip:
     - codecov
+    - flake8
     - git+https://github.com/shirtsgroup/cg_openmm.git
     - git+https://github.com/shirtsgroup/physical-validation.git
