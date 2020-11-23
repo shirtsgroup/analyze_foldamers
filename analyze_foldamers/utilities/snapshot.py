@@ -19,6 +19,6 @@ def take_snapshot(file_list):
         file_str = file_str[:-1]
     
     try:
-        os.system(f'vmd -dispdev text -f {file_str} -e render_snapshot.vmd')
+        os.system(f'vmd -dispdev text -e render_snapshot.vmd -args {file_str}')
     except:
         print('VMD is required to use this function')

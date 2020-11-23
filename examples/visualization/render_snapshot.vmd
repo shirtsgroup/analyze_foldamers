@@ -6,6 +6,20 @@ axes location off
 # Set background color
 color Display Background white
 
+# Load in molecules:
+# argv is a list of files
+
+set n_files [llength $argv]
+
+set file0 [lindex $argv 0]
+
+mol new $file0 autobonds off
+
+for {set i 1} {$i < $n_files} {incr i} {
+  set file_i [lindex $argv $i]
+  mol addfile $file_i autobonds off
+  }
+
 # Set representation and material
 mol modmaterial 0 0 Glossy
 mol representation Licorice
