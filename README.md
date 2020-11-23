@@ -1,8 +1,7 @@
 analyze_foldamers
 ==============================
 [//]: # (Badges)
-[![Travis Build Status](https://travis-ci.com/shirtsgroup/analyze_foldamers.svg?branch=master)](https://travis-ci.com/shirtsgroup/analyze_foldamers)
-[![GH Actions Status](https://github.com/shirtsgroup/analyze_foldamers/workflows/python-package/badge.svg)](https://github.com/analyze_foldamers/actions?query=branch%3Amaster)
+![GH Actions Status](https://github.com/shirtsgroup/analyze_foldamers/workflows/python-package/badge.svg)
 [![codecov](https://codecov.io/gh/shirtsgroup/analyze_foldamers/branch/master/graph/badge.svg)](https://codecov.io/gh/shirtsgroup/analyze_foldamers/branch/master)
 [![Documentation Status](https://readthedocs.org/projects/analyze-foldamers/badge/?version=latest)](https://analyze-foldamers.readthedocs.io/en/latest/?badge=latest)
 
