@@ -1,0 +1,40 @@
+# This script renders each frame loaded into VMD
+
+# Turn axes off
+axes location off
+
+# Set background color
+color Display Background white
+
+# Load in molecules:
+# argv is a list of files
+
+set n_files [llength $argv]
+
+set file0 [lindex $argv 0]
+
+mol new $file0 autobonds off
+
+for {set i 1} {$i < $n_files} {incr i} {
+  set file_i [lindex $argv $i]
+  mol addfile $file_i autobonds off
+  }
+
+# Set representation and material
+mol modmaterial 0 0 Glossy
+mol representation Licorice
+mol modstyle 0 0 Licorice 0.2 12.0 12.0
+
+# Select frame(s)
+set n_frames [molinfo top get numframes]
+
+for {set frame_i 0} {$frame_i < $n_frames} {incr frame_i} {
+  animate goto $frame_i
+  display resize 1024 1024
+  display resetview
+
+  # Render with TachyonInternal
+  render TachyonInternal snapshot_$frame_i.bmp
+  }
+  
+exit

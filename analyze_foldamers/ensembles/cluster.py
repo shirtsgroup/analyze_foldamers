@@ -13,6 +13,60 @@ from cg_openmm.utilities.iotools import write_pdbfile_without_topology
 from sklearn_extra.cluster import KMedoids
 from scipy.optimize import minimize    
     
+def get_representative_structures(
+    file_list, cgmodel,
+    frame_start=0, frame_stride=1, frame_end=-1,
+    output_format="pdb", output_dir="cluster_output"):
+    """
+    Using the similarity matrix from RMSD distances, determine a representative structure for each
+    file in file_list    
+
+    :param file_list: A list of PDB or DCD files to read and concatenate
+    :type file_list: List( str )
+    
+    :param cgmodel: A CGModel() class object
+    :type cgmodel: class
+    
+    :param frame_start: First frame in pdb trajectory file to use for clustering.
+    :type frame_start: int
+
+    :param frame_stride: Advance by this many frames when reading trajectories.
+    :type frame_stride: int
+
+    :param frame_end: Last frame in trajectory file to use for clustering.
+    :type frame_end: int
+    """
+    
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)    
+    
+    if type(file_list) == str:
+        # If a single file, make into list:
+        file_list = file_list.split()
+    
+    file_list_out = []
+    
+    for file in file_list:
+        distances, traj_all = get_rmsd_matrix(file, cgmodel, frame_start, frame_stride, frame_end)
+        # Compute medoid based on similarity scores:
+        medoid_index = np.exp(-distances/distances.std()).sum(axis=1).argmax()
+            
+        medoid_xyz = traj_all[medoid_index].xyz[0]
+
+        positions = medoid_xyz * unit.nanometer
+        file_name = str(f"{file[:-4]}_sim.{output_format}")
+        file_list_out.append(file_name)
+        if output_format=="dcd":
+            dcdtraj = md.Trajectory(
+                xyz=positions.value_in_unit(unit.nanometer),
+                topology=md.Topology.from_openmm(cgmodel.topology),
+            )
+            md.Trajectory.save_dcd(dcdtraj,file_name)
+        else:
+            cgmodel.positions = positions
+            write_pdbfile_without_topology(cgmodel, file_name)
+        
+    return file_list_out
     
 def get_cluster_medoid_positions_KMedoids(
     file_list, cgmodel, n_clusters=2,
@@ -624,6 +678,11 @@ def get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end):
     
     # Load files as {replica number: replica trajectory}
     rep_traj = {}
+    
+    if type(file_list) == str:
+        # If a single file, make into list:
+        file_list = file_list.split()    
+ 
     for i in range(len(file_list)):
         if file_list[0][-3:] == 'dcd':
             rep_traj[i] = md.load(file_list[i],top=md.Topology.from_openmm(cgmodel.topology))
