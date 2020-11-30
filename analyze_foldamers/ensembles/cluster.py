@@ -40,6 +40,10 @@ def get_representative_structures(
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)    
     
+    if type(file_list) == str:
+        # If a single file, make into list:
+        file_list = file_list.split()
+    
     file_list_out = []
     
     for file in file_list:
