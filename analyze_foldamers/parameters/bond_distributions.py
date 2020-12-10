@@ -8,6 +8,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.backends.backend_pdf import PdfPages
+from analyze_foldamers.parameters.bond_distributions import *
 
 def assign_bond_types(cgmodel, bond_list):
     """Internal function for assigning bond types"""
