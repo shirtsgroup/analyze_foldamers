@@ -58,8 +58,8 @@ def assign_angle_types(cgmodel, angle_list):
             ang_dict[reverse_string_name] = i_angle_type
             # For inverse dict we will use only the forward name based on first encounter
             inv_ang_dict[str(i_angle_type)] = string_name
-            print(f"adding new angle type {i_angle_type}: {string_name} to dictionary")
-            print(f"adding reverse version {i_angle_type}: {reverse_string_name} to dictionary")
+            # print(f"adding new angle type {i_angle_type}: {string_name} to dictionary")
+            # print(f"adding reverse version {i_angle_type}: {reverse_string_name} to dictionary")
             
         ang_types.append(ang_dict[string_name])
                     
@@ -123,8 +123,8 @@ def assign_torsion_types(cgmodel, torsion_list):
             # For inverse dict we will use only the forward name based on first encounter
             inv_torsion_dict[str(i_torsion_type)] = string_name
             
-            print(f"adding new torsion type {i_torsion_type}: {string_name} to dictionary")
-            print(f"adding reverse version {i_torsion_type}: {reverse_string_name} to dictionary")
+            # print(f"adding new torsion type {i_torsion_type}: {string_name} to dictionary")
+            # print(f"adding reverse version {i_torsion_type}: {reverse_string_name} to dictionary")
             
             
         torsion_types.append(torsion_dict[string_name])
@@ -472,12 +472,6 @@ def calc_2d_distribution(
         yvar_name_reverse += "_"
     yvar_name_reverse = yvar_name_reverse[:-1]
     
-    print(xvar_name)
-    print(xvar_name_reverse)
-    
-    print(yvar_name)
-    print(yvar_name_reverse)
-    
     for file in file_list:
     
         # Load in a trajectory file:
@@ -704,8 +698,6 @@ def calc_2d_distribution(
         xvar_val_array_combo[file] = np.reshape(xvar_val_array_combo[file], (nframes*n_occ_x*n_occ_y,1))
         yvar_val_array_combo[file] = np.reshape(yvar_val_array_combo[file], (nframes*n_occ_x*n_occ_y,1))        
         
-        print(xvar_val_array_combo[file].shape)
-        
     # 2d histogram the data and plot:
     hist_data, xedges, yedges = plot_2d_distribution(
         file_list, xvar_val_array_combo, yvar_val_array_combo, xvar_bin_edges, yvar_bin_edges,
@@ -898,8 +890,6 @@ def plot_2d_distribution(file_list, xvar_val_array, yvar_val_array, xvar_bin_edg
         # Accounting for blank gridspec at the borders:
         row = int(np.ceil(subplot_id/(ncol-2)))
         col = 1+int((subplot_id-1)%(ncol-2))
-        
-        print(f'{row} {col}')
         
         # axs subplot object is only subscriptable in dimensions it has multiple entries in
         if nrow > 1 and ncol > 1: 
