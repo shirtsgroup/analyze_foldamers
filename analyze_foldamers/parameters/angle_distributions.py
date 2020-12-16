@@ -382,7 +382,7 @@ def calc_2d_distribution(
     xvar_name = "bb_bb_bb",
     yvar_name = "bb_bb_bb_bb",
     colormap="Spectral",
-):      
+    ):      
 
     """
     Calculate and plot 2d histogramt for any 2 bonded variables,
@@ -446,8 +446,9 @@ def calc_2d_distribution(
     particle_list.append(particle)
     
     particle_list_reverse = particle_list[::-1]
+    
     xvar_name_reverse = ""
-    for par in particle_list:
+    for par in particle_list_reverse:
         xvar_name_reverse += par
         xvar_name_reverse += "_"
     xvar_name_reverse = xvar_name_reverse[:-1]
@@ -464,12 +465,18 @@ def calc_2d_distribution(
     particle_list.append(particle)
     
     particle_list_reverse = particle_list[::-1]
+    
     yvar_name_reverse = ""
-    for par in particle_list:
+    for par in particle_list_reverse:
         yvar_name_reverse += par
         yvar_name_reverse += "_"
     yvar_name_reverse = yvar_name_reverse[:-1]
     
+    print(xvar_name)
+    print(xvar_name_reverse)
+    
+    print(yvar_name)
+    print(yvar_name_reverse)
     
     for file in file_list:
     
@@ -509,12 +516,6 @@ def calc_2d_distribution(
                     # This returns an [nframes x n_bonds] array
                     xvar_val_array[file] = md.compute_distances(traj,bond_sub_arrays[str(i+1)])
                     
-                    # We will have different numbers of bonds and torsion angle.
-                    # We will set a convention of omitting the first and last bonds
-                    
-                    # Reshape array:
-                    xvar_val_array[file] = np.reshape(xvar_val_array[file][:,1:-1], (nframes*(n_i[i]-2)[0],1))
-                    
                     # Get equilibrium value:
                     b_eq = cgmodel.get_bond_length(bond_sub_arrays[str(i+1)][0])
                     
@@ -552,14 +553,8 @@ def calc_2d_distribution(
                     # This returns an [nframes x n_angles] array
                     xvar_val_array[file] = md.compute_angles(traj,ang_sub_arrays[str(i+1)])
                     
-                    # We will have different numbers of bond-bending angle and torsion angle.
-                    # We will set a convention of omitting the last angle value.
-                    
-                    # Convert to degrees and exclude last angle:  
-                    xvar_val_array[file] = (180/np.pi)*xvar_val_array[file][:,:-1]
-                    
-                    # Reshape array:
-                    xvar_val_array[file] = np.reshape(xvar_val_array[file], (nframes*(n_i[i]-1)[0],1))
+                    # Convert to degrees:  
+                    xvar_val_array[file] *= (180/np.pi)
                     
             xlabel = f'{xvar_name} angle (degrees)'
                 
@@ -589,9 +584,6 @@ def calc_2d_distribution(
                     # Convert to degrees:  
                     xvar_val_array[file] *= (180/np.pi)
                     
-                    # Reshape array
-                    xvar_val_array[file] = np.reshape(xvar_val_array[file], (nframes*n_j[i][0],1))
-                    
             xlabel = f'{xvar_name} angle (degrees)'
                     
         # y variable   
@@ -614,12 +606,6 @@ def calc_2d_distribution(
                     # Compute all bond length values in trajectory
                     # This returns an [nframes x n_bonds] array
                     yvar_val_array[file] = md.compute_distances(traj,bond_sub_arrays[str(i+1)])
-                    
-                    # We will have different numbers of bonds and torsion angle.
-                    # We will set a convention of omitting the first and last bonds
-                    
-                    # Reshape array:
-                    yvar_val_array[file] = np.reshape(yvar_val_array[file][:,1:-1], (nframes*(n_i[i]-2)[0],1))
                     
                     # Get equilibrium value:
                     b_eq = cgmodel.get_bond_length(bond_sub_arrays[str(i+1)][0])
@@ -658,14 +644,8 @@ def calc_2d_distribution(
                     # This returns an [nframes x n_angles] array
                     yvar_val_array[file] = md.compute_angles(traj,ang_sub_arrays[str(i+1)])
                     
-                    # We will have different numbers of bond-bending angle and torsion angle.
-                    # We will set a convention of omitting the last angle value.
-                    
-                    # Convert to degrees and exclude last angle:  
-                    yvar_val_array[file] = (180/np.pi)*yvar_val_array[file][:,:-1]
-                    
-                    # Reshape array:
-                    yvar_val_array[file] = np.reshape(yvar_val_array[file], (nframes*(n_i[i]-1)[0],1))
+                    # Convert to degrees:  
+                    yvar_val_array[file] *= (180/np.pi)
                     
             ylabel = f'{yvar_name} angle (degrees)'
                 
@@ -694,18 +674,45 @@ def calc_2d_distribution(
                     
                     # Convert to degrees:  
                     yvar_val_array[file] *= (180/np.pi)
-                    
-                    # Reshape array
-                    yvar_val_array[file] = np.reshape(yvar_val_array[file], (nframes*n_j[i][0],1))
 
             ylabel = f'{yvar_name} angle (degrees)'
             
+    # Since the bonded variables may have different numbers of observables, we can use all 
+    # combinations of the 2 parameter observables to create the histograms.
+    
+    xvar_val_array_combo = {}
+    yvar_val_array_combo = {}
+    
+    # Each array of single observables in [n_frames x n_occurances]
+    # x value arrays should be [xval0_y0, xval1_y0, ...xvaln_y0, ... xval0_yn, xval1_yn, xvaln_yn]
+    # y value arrays should be [yval0_x0, yval0_x1, ...yval0_xn, ... yvaln_x0, yvaln_x1, yvaln_xn]
+    
+    
+    for file in file_list:
+        n_occ_x = xvar_val_array[file].shape[1]
+        n_occ_y = yvar_val_array[file].shape[1]
+    
+        xvar_val_array_combo[file] = np.zeros((nframes,n_occ_x*n_occ_y))
+        yvar_val_array_combo[file] = np.zeros_like(xvar_val_array_combo[file])
+        
+        for iy in range(n_occ_y):
+            xvar_val_array_combo[file][:,(iy*n_occ_x):((iy+1)*n_occ_x)] = xvar_val_array[file]
+            for ix in range(n_occ_x):
+                yvar_val_array_combo[file][:,ix+iy*n_occ_x] = yvar_val_array[file][:,iy]
+        
+        # Reshape arrays for histogramming:
+        xvar_val_array_combo[file] = np.reshape(xvar_val_array_combo[file], (nframes*n_occ_x*n_occ_y,1))
+        yvar_val_array_combo[file] = np.reshape(yvar_val_array_combo[file], (nframes*n_occ_x*n_occ_y,1))        
+        
+        print(xvar_val_array_combo[file].shape)
+        
     # 2d histogram the data and plot:
     hist_data, xedges, yedges = plot_2d_distribution(
-        file_list, xvar_val_array, yvar_val_array, xvar_bin_edges, yvar_bin_edges,
+        file_list, xvar_val_array_combo, yvar_val_array_combo, xvar_bin_edges, yvar_bin_edges,
         plotfile, colormap, xlabel, ylabel)
     
     return hist_data, xedges, yedges
+    
     
 def calc_ramachandran(
     cgmodel,
@@ -834,7 +841,7 @@ def calc_ramachandran(
                     traj,torsion_sub_arrays[str(i+1)])
                 
                 # Convert to degrees:  
-                torsion_val_array[file] = (180/np.pi)*torsion_val_array[file]
+                torsion_val_array[file] *= (180/np.pi)
                 
                 # Reshape array
                 torsion_val_array[file] = np.reshape(torsion_val_array[file], (nframes*n_j[i][0],1))
@@ -859,8 +866,10 @@ def plot_2d_distribution(file_list, xvar_val_array, yvar_val_array, xvar_bin_edg
     
     # Determine optimal subplot layout
     nseries = len(file_list)
-    nrow = int(np.ceil(np.sqrt(nseries)))+1
-    ncol = int(np.ceil(nseries/nrow))+2
+    # This favors more rows instead of more columns:
+    # If not a square number of series, an extra row is needed:
+    nrow = int(np.ceil(np.sqrt(nseries)))+2+(nseries%(np.ceil(np.sqrt(nseries)))!=0)
+    ncol = int(np.ceil(nseries/(nrow-1)))+2    
     
     # Initialize plot
     
@@ -875,6 +884,7 @@ def plot_2d_distribution(file_list, xvar_val_array, yvar_val_array, xvar_bin_edg
     widths[0]=0.1
     widths[-1]=0.01
     heights = np.ones(nrow)
+    heights[0] = 0.1
     heights[-1] = 0.1
         
     fig_specs = figure.add_gridspec(
@@ -886,8 +896,10 @@ def plot_2d_distribution(file_list, xvar_val_array, yvar_val_array, xvar_bin_edg
     for file in file_list:
     
         # Accounting for blank gridspec at the borders:
-        row = int(np.ceil(subplot_id/(ncol-2)))-1
+        row = int(np.ceil(subplot_id/(ncol-2)))
         col = 1+int((subplot_id-1)%(ncol-2))
+        
+        print(f'{row} {col}')
         
         # axs subplot object is only subscriptable in dimensions it has multiple entries in
         if nrow > 1 and ncol > 1: 
@@ -957,7 +969,7 @@ def plot_2d_distribution(file_list, xvar_val_array, yvar_val_array, xvar_bin_edg
         # For now just replot the data:
         
         # Accounting for blank gridspec at the borders:
-        row = int(np.ceil(subplot_id/(ncol-2)))-1
+        row = int(np.ceil(subplot_id/(ncol-2)))
         col = 1+int((subplot_id-1)%(ncol-2))
         
         if nrow > 1 and ncol > 1: 
@@ -1005,6 +1017,7 @@ def plot_2d_distribution(file_list, xvar_val_array, yvar_val_array, xvar_bin_edg
     ax_west = figure.add_subplot(fig_specs[:,0], frameon=False)
     ax_east = figure.add_subplot(fig_specs[:,-1], frameon=False)
     ax_south = figure.add_subplot(fig_specs[-1,1:-1], frameon=False)
+    ax_north = figure.add_subplot(fig_specs[0,1:-1], frameon=False)
     
     # Add colorbar to right side:
     plt.colorbar(
@@ -1024,6 +1037,7 @@ def plot_2d_distribution(file_list, xvar_val_array, yvar_val_array, xvar_bin_edg
     ax_east.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
     ax_west.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
     ax_south.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
+    ax_north.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
     
     plt.savefig(plotfile)
     plt.close()
