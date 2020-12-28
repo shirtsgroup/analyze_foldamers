@@ -179,7 +179,7 @@ def calc_bond_angle_distribution(
     :type plotfile: str
     
     :returns:
-       - torsion_hist_data ( dict )    
+       - angle_hist_data ( dict )    
     
     """
     
