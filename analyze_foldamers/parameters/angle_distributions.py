@@ -178,6 +178,9 @@ def calc_bond_angle_distribution(
     :param plotfile: Base filename for saving bond angle distribution pdf plots
     :type plotfile: str
     
+    :returns:
+       - torsion_hist_data ( dict )    
+    
     """
     
     # Convert file_list to list if a single string:
@@ -291,6 +294,10 @@ def calc_torsion_distribution(
     
     :param plotfile: Base filename for saving torsion distribution pdf plots
     :type plotfile: str
+    
+    :returns:
+       - torsion_hist_data ( dict )
+    
     """
     
     # Convert file_list to list if a single string:
@@ -385,7 +392,7 @@ def calc_2d_distribution(
     ):      
 
     """
-    Calculate and plot 2d histogramt for any 2 bonded variables,
+    Calculate and plot 2d histogram for any 2 bonded variables,
     given a CGModel object and pdb or dcd trajectory.
 
     :param cgmodel: CGModel() object
@@ -394,10 +401,10 @@ def calc_2d_distribution(
     :param file_list: path to pdb or dcd trajectory file(s) - can be a list or single string
     :type file_list: str or list(str)
     
-    :param nbin_xvar: number of bins for x bonded variable (spanning from 0 to 180 degrees)
+    :param nbin_xvar: number of bins for x bonded variable
     :type nbin_xvar: int
     
-    :param nbin_yvar: number of bins for y bonded variable (spanning from -180 to +180 degrees)
+    :param nbin_yvar: number of bins for y bonded variable
     :type nbin_yvar:
     
     :param frame_start: First frame in trajectory file to use for analysis.
@@ -412,15 +419,19 @@ def calc_2d_distribution(
     :param plotfile: Filename for saving torsion distribution pdf plots
     :type plotfile: str
     
-    :param xvar_name: particle sequence of the x bonded parameter (default="bb_bb_bb") - for now only single sequence permitted
+    :param xvar_name: particle sequence of the x bonded parameter (default="bb_bb_bb")
     :type xvar_name: str
     
-    :param yvar_name: particle sequence of the y bonded parameter (default="bb_bb_bb_bb") - for now only single sequence permitted
+    :param yvar_name: particle sequence of the y bonded parameter (default="bb_bb_bb_bb")
     :type yvar_name: str    
     
     :param colormap: matplotlib pyplot colormap to use (default='Spectral')
     :type colormap: str (case sensitive)
     
+    :returns:
+       - hist_data ( dict )
+       - xedges ( dict )
+       - yedges ( dict )
     """
     
     # Convert file_list to list if a single string:
@@ -479,7 +490,6 @@ def calc_2d_distribution(
             traj = md.load(file,top=md.Topology.from_openmm(cgmodel.topology))
         else:
             traj = md.load(file)
-            
             
         # Select frames for analysis:    
         if frame_end == -1:
@@ -677,7 +687,7 @@ def calc_2d_distribution(
     xvar_val_array_combo = {}
     yvar_val_array_combo = {}
     
-    # Each array of single observables in [n_frames x n_occurances]
+    # Each array of single observables is [n_frames x n_occurances]
     # x value arrays should be [xval0_y0, xval1_y0, ...xvaln_y0, ... xval0_yn, xval1_yn, xvaln_yn]
     # y value arrays should be [yval0_x0, yval0_x1, ...yval0_xn, ... yvaln_x0, yvaln_x1, yvaln_xn]
     
@@ -756,6 +766,10 @@ def calc_ramachandran(
     :param colormap: matplotlib pyplot colormap to use (default='Spectral')
     :type colormap: str (case sensitive)
     
+    :returns:
+       - hist_data ( dict )
+       - xedges ( dict )
+       - yedges ( dict )
     """
     
     # Convert file_list to list if a single string:
@@ -848,7 +862,7 @@ def calc_ramachandran(
     
 def plot_2d_distribution(file_list, xvar_val_array, yvar_val_array, xvar_bin_edges, yvar_bin_edges,
     plotfile, colormap, xlabel, ylabel): 
-    """Internal function for 2d histogramming angle data and creating ramachandran plots"""
+    """Internal function for 2d histogramming bonded observable data and creating 2d plots"""
     
     # Store 2d histogram output
     hist_data = {}

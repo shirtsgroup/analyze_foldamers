@@ -106,6 +106,8 @@ def calc_bond_length_distribution(
     :param plotfile: filename for saving bond length distribution pdf plots
     :type plotfile: str
     
+    :returns:
+       - bond_hist_data ( dict )
     """   
     
     # Convert file_list to list if a single string:
