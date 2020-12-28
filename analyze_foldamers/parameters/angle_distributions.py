@@ -4,6 +4,7 @@ import mdtraj as md
 from simtk import unit
 from cg_openmm.cg_model.cgmodel import CGModel
 from analyze_foldamers.utilities.plot import plot_distribution
+from analyze_foldamers.parameters.bond_distributions import *
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -57,8 +58,8 @@ def assign_angle_types(cgmodel, angle_list):
             ang_dict[reverse_string_name] = i_angle_type
             # For inverse dict we will use only the forward name based on first encounter
             inv_ang_dict[str(i_angle_type)] = string_name
-            print(f"adding new angle type {i_angle_type}: {string_name} to dictionary")
-            print(f"adding reverse version {i_angle_type}: {reverse_string_name} to dictionary")
+            # print(f"adding new angle type {i_angle_type}: {string_name} to dictionary")
+            # print(f"adding reverse version {i_angle_type}: {reverse_string_name} to dictionary")
             
         ang_types.append(ang_dict[string_name])
                     
@@ -122,8 +123,8 @@ def assign_torsion_types(cgmodel, torsion_list):
             # For inverse dict we will use only the forward name based on first encounter
             inv_torsion_dict[str(i_torsion_type)] = string_name
             
-            print(f"adding new torsion type {i_torsion_type}: {string_name} to dictionary")
-            print(f"adding reverse version {i_torsion_type}: {reverse_string_name} to dictionary")
+            # print(f"adding new torsion type {i_torsion_type}: {string_name} to dictionary")
+            # print(f"adding reverse version {i_torsion_type}: {reverse_string_name} to dictionary")
             
             
         torsion_types.append(torsion_dict[string_name])
@@ -176,6 +177,9 @@ def calc_bond_angle_distribution(
     
     :param plotfile: Base filename for saving bond angle distribution pdf plots
     :type plotfile: str
+    
+    :returns:
+       - angle_hist_data ( dict )    
     
     """
     
@@ -290,6 +294,10 @@ def calc_torsion_distribution(
     
     :param plotfile: Base filename for saving torsion distribution pdf plots
     :type plotfile: str
+    
+    :returns:
+       - torsion_hist_data ( dict )
+    
     """
     
     # Convert file_list to list if a single string:
@@ -369,6 +377,345 @@ def calc_torsion_distribution(
     return torsion_hist_data
     
 
+def calc_2d_distribution(
+    cgmodel,
+    file_list,
+    nbin_xvar=180,
+    nbin_yvar=180,
+    frame_start=0,
+    frame_stride=1,
+    frame_end=-1,
+    plotfile="2d_hist.pdf",
+    xvar_name = "bb_bb_bb",
+    yvar_name = "bb_bb_bb_bb",
+    colormap="Spectral",
+    ):      
+
+    """
+    Calculate and plot 2d histogram for any 2 bonded variables,
+    given a CGModel object and pdb or dcd trajectory.
+
+    :param cgmodel: CGModel() object
+    :type cgmodel: class
+    
+    :param file_list: path to pdb or dcd trajectory file(s) - can be a list or single string
+    :type file_list: str or list(str)
+    
+    :param nbin_xvar: number of bins for x bonded variable
+    :type nbin_xvar: int
+    
+    :param nbin_yvar: number of bins for y bonded variable
+    :type nbin_yvar:
+    
+    :param frame_start: First frame in trajectory file to use for analysis.
+    :type frame_start: int
+
+    :param frame_stride: Advance by this many frames when reading trajectories.
+    :type frame_stride: int
+
+    :param frame_end: Last frame in trajectory file to use for analysis.
+    :type frame_end: int
+    
+    :param plotfile: Filename for saving torsion distribution pdf plots
+    :type plotfile: str
+    
+    :param xvar_name: particle sequence of the x bonded parameter (default="bb_bb_bb")
+    :type xvar_name: str
+    
+    :param yvar_name: particle sequence of the y bonded parameter (default="bb_bb_bb_bb")
+    :type yvar_name: str    
+    
+    :param colormap: matplotlib pyplot colormap to use (default='Spectral')
+    :type colormap: str (case sensitive)
+    
+    :returns:
+       - hist_data ( dict )
+       - xedges ( dict )
+       - yedges ( dict )
+    """
+    
+    # Convert file_list to list if a single string:
+    if type(file_list) == str:
+        # Single file
+        file_list = file_list.split()
+    
+    # Store angle, torsion values by filename for computing global colormap
+    xvar_val_array = {}
+    yvar_val_array = {}
+    
+    # Store the reverse name of the bonded type (need to check both)
+    
+    # x variable
+    particle_list = []
+    particle = ""
+    for c in xvar_name:
+        if c == '_':
+            particle_list.append(particle)
+            particle = ""
+        else:
+            particle += c
+    particle_list.append(particle)
+    
+    particle_list_reverse = particle_list[::-1]
+    
+    xvar_name_reverse = ""
+    for par in particle_list_reverse:
+        xvar_name_reverse += par
+        xvar_name_reverse += "_"
+    xvar_name_reverse = xvar_name_reverse[:-1]
+    
+    # y variable
+    particle_list = []
+    particle = ""
+    for c in yvar_name:
+        if c == '_':
+            particle_list.append(particle)
+            particle = ""
+        else:
+            particle += c
+    particle_list.append(particle)
+    
+    particle_list_reverse = particle_list[::-1]
+    
+    yvar_name_reverse = ""
+    for par in particle_list_reverse:
+        yvar_name_reverse += par
+        yvar_name_reverse += "_"
+    yvar_name_reverse = yvar_name_reverse[:-1]
+    
+    for file in file_list:
+    
+        # Load in a trajectory file:
+        if file[-3:] == 'dcd':
+            traj = md.load(file,top=md.Topology.from_openmm(cgmodel.topology))
+        else:
+            traj = md.load(file)
+            
+        # Select frames for analysis:    
+        if frame_end == -1:
+            frame_end = traj.n_frames
+
+        traj = traj[frame_start:frame_end:frame_stride]             
+            
+        nframes = traj.n_frames
+        
+        # x variable   
+        
+        # Determine parameter type of xvar:
+        n_particle_x = xvar_name.count('_')+1
+        
+        if n_particle_x == 2:
+            # Bond
+           
+            # Get bond list
+            bond_list = CGModel.get_bond_list(cgmodel)
+            
+            # Assign bond types:
+            bond_types, bond_array, bond_sub_arrays, n_i, i_bond_type, bond_dict, inv_bond_dict = \
+                assign_bond_types(cgmodel, bond_list)
+            
+            for i in range(i_bond_type):
+                if inv_bond_dict[str(i+1)] == xvar_name or inv_bond_dict[str(i+1)] == xvar_name_reverse:
+                    # Compute all bond length values in trajectory
+                    # This returns an [nframes x n_bonds] array
+                    xvar_val_array[file] = md.compute_distances(traj,bond_sub_arrays[str(i+1)])
+                    
+                    # Get equilibrium value:
+                    b_eq = cgmodel.get_bond_length(bond_sub_arrays[str(i+1)][0])
+                    
+            # Set bin edges:
+            # This should be the same across all files - use heuristic from equilibrium bond length
+            b_min = 0.5*b_eq.value_in_unit(unit.nanometer)
+            b_max = 1.5*b_eq.value_in_unit(unit.nanometer)
+           
+            xvar_bin_edges = np.linspace(b_min,b_max,nbin_xvar+1)
+            xvar_bin_centers = np.zeros((len(xvar_bin_edges)-1,1))
+            for i in range(len(xvar_bin_edges)-1):
+                xvar_bin_centers[i] = (xvar_bin_edges[i]+xvar_bin_edges[i+1])/2  
+                
+            xlabel = f'{xvar_name} distance ({unit.nanometer})'
+                    
+        elif n_particle_x == 3:
+            # Angle
+            
+            # Get angle list
+            angle_list = CGModel.get_bond_angle_list(cgmodel)
+        
+            # Assign angle types:
+            ang_types, ang_array, ang_sub_arrays, n_i, i_angle_type, ang_dict, inv_ang_dict = \
+                assign_angle_types(cgmodel, angle_list)
+                
+            # Set bin edges:
+            xvar_bin_edges = np.linspace(0,180,nbin_xvar+1)
+            xvar_bin_centers = np.zeros((len(xvar_bin_edges)-1,1))
+            for i in range(len(xvar_bin_edges)-1):
+                xvar_bin_centers[i] = (xvar_bin_edges[i]+xvar_bin_edges[i+1])/2    
+            
+            for i in range(i_angle_type):
+                if inv_ang_dict[str(i+1)] == xvar_name or inv_ang_dict[str(i+1)] == xvar_name_reverse:
+                    # Compute all angle values in trajectory
+                    # This returns an [nframes x n_angles] array
+                    xvar_val_array[file] = md.compute_angles(traj,ang_sub_arrays[str(i+1)])
+                    
+                    # Convert to degrees:  
+                    xvar_val_array[file] *= (180/np.pi)
+                    
+            xlabel = f'{xvar_name} angle (degrees)'
+                
+        elif n_particle_x == 4:
+            # Torsion
+            
+            # Get torsion list
+            torsion_list = CGModel.get_torsion_list(cgmodel)
+
+            # Assign torsion types
+            torsion_types, torsion_array, torsion_sub_arrays, n_j, i_torsion_type, torsion_dict, inv_torsion_dict = \
+                assign_torsion_types(cgmodel, torsion_list)
+            
+            # Set bin edges:
+            xvar_bin_edges = np.linspace(-180,180,nbin_xvar+1)
+            xvar_bin_centers = np.zeros((len(xvar_bin_edges)-1,1))
+            for i in range(len(xvar_bin_edges)-1):
+                xvar_bin_centers[i] = (xvar_bin_edges[i]+xvar_bin_edges[i+1])/2
+                
+            for i in range(i_torsion_type):
+                if inv_torsion_dict[str(i+1)] == xvar_name or inv_torsion_dict[str(i+1)] == xvar_name_reverse:
+                    # Compute all torsion values in trajectory
+                    # This returns an [nframes x n_torsions] array
+                    xvar_val_array[file] = md.compute_dihedrals(
+                        traj,torsion_sub_arrays[str(i+1)])
+                    
+                    # Convert to degrees:  
+                    xvar_val_array[file] *= (180/np.pi)
+                    
+            xlabel = f'{xvar_name} angle (degrees)'
+                    
+        # y variable   
+        
+        # Determine parameter type of yvar:
+        n_particle_y = yvar_name.count('_')+1
+        
+        if n_particle_y == 2:
+            # Bond
+           
+            # Get bond list
+            bond_list = CGModel.get_bond_list(cgmodel)
+            
+            # Assign bond types:
+            bond_types, bond_array, bond_sub_arrays, n_i, i_bond_type, bond_dict, inv_bond_dict = \
+                assign_bond_types(cgmodel, bond_list)
+            
+            for i in range(i_bond_type):
+                if inv_bond_dict[str(i+1)] == yvar_name or inv_bond_dict[str(i+1)] == yvar_name_reverse:
+                    # Compute all bond length values in trajectory
+                    # This returns an [nframes x n_bonds] array
+                    yvar_val_array[file] = md.compute_distances(traj,bond_sub_arrays[str(i+1)])
+                    
+                    # Get equilibrium value:
+                    b_eq = cgmodel.get_bond_length(bond_sub_arrays[str(i+1)][0])
+                    
+            # Set bin edges:
+            # This should be the same across all files - use heuristic from equilibrium bond length
+            b_min = 0.5*b_eq.value_in_unit(unit.nanometer)
+            b_max = 1.5*b_eq.value_in_unit(unit.nanometer)
+           
+            yvar_bin_edges = np.linspace(b_min,b_max,nbin_yvar+1)
+            yvar_bin_centers = np.zeros((len(yvar_bin_edges)-1,1))
+            for i in range(len(yvar_bin_edges)-1):
+                yvar_bin_centers[i] = (yvar_bin_edges[i]+yvar_bin_edges[i+1])/2  
+                
+            ylabel = f'{yvar_name} distance ({unit.nanometer})'
+                    
+        elif n_particle_y == 3:
+            # Angle
+            
+            # Get angle list
+            angle_list = CGModel.get_bond_angle_list(cgmodel)
+        
+            # Assign angle types:
+            ang_types, ang_array, ang_sub_arrays, n_i, i_angle_type, ang_dict, inv_ang_dict = \
+                assign_angle_types(cgmodel, angle_list)
+                
+            # Set bin edges:
+            yvar_bin_edges = np.linspace(0,180,nbin_yvar+1)
+            yvar_bin_centers = np.zeros((len(yvar_bin_edges)-1,1))
+            for i in range(len(yvar_bin_edges)-1):
+                yvar_bin_centers[i] = (yvar_bin_edges[i]+yvar_bin_edges[i+1])/2    
+            
+            for i in range(i_angle_type):
+                if inv_ang_dict[str(i+1)] == yvar_name or inv_ang_dict[str(i+1)] == yvar_name_reverse:
+                    # Compute all angle values in trajectory
+                    # This returns an [nframes x n_angles] array
+                    yvar_val_array[file] = md.compute_angles(traj,ang_sub_arrays[str(i+1)])
+                    
+                    # Convert to degrees:  
+                    yvar_val_array[file] *= (180/np.pi)
+                    
+            ylabel = f'{yvar_name} angle (degrees)'
+                
+        elif n_particle_y == 4:
+            # Torsion
+            
+            # Get torsion list
+            torsion_list = CGModel.get_torsion_list(cgmodel)
+
+            # Assign torsion types
+            torsion_types, torsion_array, torsion_sub_arrays, n_j, i_torsion_type, torsion_dict, inv_torsion_dict = \
+                assign_torsion_types(cgmodel, torsion_list)
+            
+            # Set bin edges:
+            yvar_bin_edges = np.linspace(-180,180,nbin_yvar+1)
+            yvar_bin_centers = np.zeros((len(yvar_bin_edges)-1,1))
+            for i in range(len(yvar_bin_edges)-1):
+                yvar_bin_centers[i] = (yvar_bin_edges[i]+yvar_bin_edges[i+1])/2
+                
+            for i in range(i_torsion_type):
+                if inv_torsion_dict[str(i+1)] == yvar_name or inv_torsion_dict[str(i+1)] == yvar_name_reverse:
+                    # Compute all torsion values in trajectory
+                    # This returns an [nframes x n_torsions] array
+                    yvar_val_array[file] = md.compute_dihedrals(
+                        traj,torsion_sub_arrays[str(i+1)])
+                    
+                    # Convert to degrees:  
+                    yvar_val_array[file] *= (180/np.pi)
+
+            ylabel = f'{yvar_name} angle (degrees)'
+            
+    # Since the bonded variables may have different numbers of observables, we can use all 
+    # combinations of the 2 parameter observables to create the histograms.
+    
+    xvar_val_array_combo = {}
+    yvar_val_array_combo = {}
+    
+    # Each array of single observables is [n_frames x n_occurances]
+    # x value arrays should be [xval0_y0, xval1_y0, ...xvaln_y0, ... xval0_yn, xval1_yn, xvaln_yn]
+    # y value arrays should be [yval0_x0, yval0_x1, ...yval0_xn, ... yvaln_x0, yvaln_x1, yvaln_xn]
+    
+    
+    for file in file_list:
+        n_occ_x = xvar_val_array[file].shape[1]
+        n_occ_y = yvar_val_array[file].shape[1]
+    
+        xvar_val_array_combo[file] = np.zeros((nframes,n_occ_x*n_occ_y))
+        yvar_val_array_combo[file] = np.zeros_like(xvar_val_array_combo[file])
+        
+        for iy in range(n_occ_y):
+            xvar_val_array_combo[file][:,(iy*n_occ_x):((iy+1)*n_occ_x)] = xvar_val_array[file]
+            for ix in range(n_occ_x):
+                yvar_val_array_combo[file][:,ix+iy*n_occ_x] = yvar_val_array[file][:,iy]
+        
+        # Reshape arrays for histogramming:
+        xvar_val_array_combo[file] = np.reshape(xvar_val_array_combo[file], (nframes*n_occ_x*n_occ_y,1))
+        yvar_val_array_combo[file] = np.reshape(yvar_val_array_combo[file], (nframes*n_occ_x*n_occ_y,1))        
+        
+    # 2d histogram the data and plot:
+    hist_data, xedges, yedges = plot_2d_distribution(
+        file_list, xvar_val_array_combo, yvar_val_array_combo, xvar_bin_edges, yvar_bin_edges,
+        plotfile, colormap, xlabel, ylabel)
+    
+    return hist_data, xedges, yedges
+    
+    
 def calc_ramachandran(
     cgmodel,
     file_list,
@@ -419,6 +766,10 @@ def calc_ramachandran(
     :param colormap: matplotlib pyplot colormap to use (default='Spectral')
     :type colormap: str (case sensitive)
     
+    :returns:
+       - hist_data ( dict )
+       - xedges ( dict )
+       - yedges ( dict )
     """
     
     # Convert file_list to list if a single string:
@@ -496,22 +847,22 @@ def calc_ramachandran(
                     traj,torsion_sub_arrays[str(i+1)])
                 
                 # Convert to degrees:  
-                torsion_val_array[file] = (180/np.pi)*torsion_val_array[file]
+                torsion_val_array[file] *= (180/np.pi)
                 
                 # Reshape array
                 torsion_val_array[file] = np.reshape(torsion_val_array[file], (nframes*n_j[i][0],1))
         
     # 2d histogram the data and plot:
-    hist_data, xedges, yedges = plot_ramachandran(
-        file_list, ang_val_array, torsion_val_array, angle_bin_edges, torsion_bin_edges,
-        plotfile, colormap)
+    hist_data, xedges, yedges = plot_2d_distribution(
+        file_list, torsion_val_array, ang_val_array, torsion_bin_edges, angle_bin_edges,
+        plotfile, colormap, xlabel='Alpha (degrees)', ylabel='Theta (degrees)')
     
     return hist_data, xedges, yedges
     
     
-def plot_ramachandran(file_list, ang_val_array, torsion_val_array, angle_bin_edges, torsion_bin_edges,
-    plotfile, colormap): 
-    """Internal function for 2d histogramming angle data and creating ramachandran plots"""
+def plot_2d_distribution(file_list, xvar_val_array, yvar_val_array, xvar_bin_edges, yvar_bin_edges,
+    plotfile, colormap, xlabel, ylabel): 
+    """Internal function for 2d histogramming bonded observable data and creating 2d plots"""
     
     # Store 2d histogram output
     hist_data = {}
@@ -521,8 +872,10 @@ def plot_ramachandran(file_list, ang_val_array, torsion_val_array, angle_bin_edg
     
     # Determine optimal subplot layout
     nseries = len(file_list)
-    nrow = int(np.ceil(np.sqrt(nseries)))+1
-    ncol = int(np.ceil(nseries/nrow))+2
+    # This favors more rows instead of more columns:
+    # If not a square number of series, an extra row is needed:
+    nrow = int(np.ceil(np.sqrt(nseries)))+2+(nseries%(np.ceil(np.sqrt(nseries)))!=0)
+    ncol = int(np.ceil(nseries/(nrow-1)))+2    
     
     # Initialize plot
     
@@ -537,6 +890,7 @@ def plot_ramachandran(file_list, ang_val_array, torsion_val_array, angle_bin_edg
     widths[0]=0.1
     widths[-1]=0.01
     heights = np.ones(nrow)
+    heights[0] = 0.1
     heights[-1] = 0.1
         
     fig_specs = figure.add_gridspec(
@@ -548,34 +902,34 @@ def plot_ramachandran(file_list, ang_val_array, torsion_val_array, angle_bin_edg
     for file in file_list:
     
         # Accounting for blank gridspec at the borders:
-        row = int(np.ceil(subplot_id/(ncol-2)))-1
+        row = int(np.ceil(subplot_id/(ncol-2)))
         col = 1+int((subplot_id-1)%(ncol-2))
         
         # axs subplot object is only subscriptable in dimensions it has multiple entries in
         if nrow > 1 and ncol > 1: 
             ax = figure.add_subplot(fig_specs[row,col])
             hist_data_out, xedges_out, yedges_out, image_out = ax.hist2d(
-                torsion_val_array[file][:,0],
-                ang_val_array[file][:,0],
-                bins=[torsion_bin_edges,angle_bin_edges],
+                xvar_val_array[file][:,0],
+                yvar_val_array[file][:,0],
+                bins=[xvar_bin_edges,yvar_bin_edges],
                 density=True,
             )
         
         if ncol > 1 and nrow == 1:
             ax = figure.add_subplot(fig_specs[row,col])
             hist_data_out, xedges_out, yedges_out, image_out = ax.hist2d(
-                torsion_val_array[file][:,0],
-                ang_val_array[file][:,0],
-                bins=[torsion_bin_edges,angle_bin_edges],
+                xvar_val_array[file][:,0],
+                yvar_val_array[file][:,0],
+                bins=[xvar_bin_edges,yvar_bin_edges],
                 density=True,
             )
             
         if ncol == 1 and nrow == 1:
             ax = figure.add_subplot(fig_specs[row,col])
             hist_data_out, xedges_out, yedges_out, image_out = ax.hist2d(
-                torsion_val_array[file][:,0],
-                ang_val_array[file][:,0],
-                bins=[torsion_bin_edges,angle_bin_edges],
+                xvar_val_array[file][:,0],
+                yvar_val_array[file][:,0],
+                bins=[xvar_bin_edges,yvar_bin_edges],
                 density=True,
             )        
         
@@ -619,15 +973,15 @@ def plot_ramachandran(file_list, ang_val_array, torsion_val_array, angle_bin_edg
         # For now just replot the data:
         
         # Accounting for blank gridspec at the borders:
-        row = int(np.ceil(subplot_id/(ncol-2)))-1
+        row = int(np.ceil(subplot_id/(ncol-2)))
         col = 1+int((subplot_id-1)%(ncol-2))
         
         if nrow > 1 and ncol > 1: 
             ax = figure.add_subplot(fig_specs[row,col])
             hist_data_out, xedges_out, yedges_out, image_out = ax.hist2d(
-                torsion_val_array[file][:,0],
-                ang_val_array[file][:,0],
-                bins=[torsion_bin_edges,angle_bin_edges],
+                xvar_val_array[file][:,0],
+                yvar_val_array[file][:,0],
+                bins=[xvar_bin_edges,yvar_bin_edges],
                 density=True,
                 cmap=cmap,
                 norm=norm,
@@ -636,9 +990,9 @@ def plot_ramachandran(file_list, ang_val_array, torsion_val_array, angle_bin_edg
         if ncol > 1 and nrow == 1:
             ax = figure.add_subplot(fig_specs[row,col])
             hist_data_out, xedges_out, yedges_out, image_out = ax.hist2d(
-                torsion_val_array[file][:,0],
-                ang_val_array[file][:,0],
-                bins=[torsion_bin_edges,angle_bin_edges],
+                xvar_val_array[file][:,0],
+                yvar_val_array[file][:,0],
+                bins=[xvar_bin_edges,yvar_bin_edges],
                 density=True,
                 cmap=cmap,
                 norm=norm,
@@ -647,9 +1001,9 @@ def plot_ramachandran(file_list, ang_val_array, torsion_val_array, angle_bin_edg
         if ncol == 1 and nrow == 1:
             ax = figure.add_subplot(fig_specs[row,col])
             hist_data_out, xedges_out, yedges_out, image_out = ax.hist2d(
-                torsion_val_array[file][:,0],
-                ang_val_array[file][:,0],
-                bins=[torsion_bin_edges,angle_bin_edges],
+                xvar_val_array[file][:,0],
+                yvar_val_array[file][:,0],
+                bins=[xvar_bin_edges,yvar_bin_edges],
                 density=True,
                 cmap=cmap,
                 norm=norm,
@@ -667,6 +1021,7 @@ def plot_ramachandran(file_list, ang_val_array, torsion_val_array, angle_bin_edg
     ax_west = figure.add_subplot(fig_specs[:,0], frameon=False)
     ax_east = figure.add_subplot(fig_specs[:,-1], frameon=False)
     ax_south = figure.add_subplot(fig_specs[-1,1:-1], frameon=False)
+    ax_north = figure.add_subplot(fig_specs[0,1:-1], frameon=False)
     
     # Add colorbar to right side:
     plt.colorbar(
@@ -677,15 +1032,16 @@ def plot_ramachandran(file_list, ang_val_array, torsion_val_array, angle_bin_edg
         pad=0,
         label='probability density')       
     
-    ax_south.set_xlabel("Alpha (degrees)", fontsize=14)
+    ax_south.set_xlabel(xlabel, fontsize=14)
     ax_south.xaxis.set_label_coords(0.5,0.5)
     
-    ax_west.set_ylabel("Theta (degrees)", fontsize=14)
+    ax_west.set_ylabel(ylabel, fontsize=14)
     ax_west.yaxis.set_label_coords(0.5,0.5)
     
     ax_east.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
     ax_west.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
     ax_south.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
+    ax_north.tick_params(labelcolor='none', top=False, bottom=False, left=False, right=False)
     
     plt.savefig(plotfile)
     plt.close()

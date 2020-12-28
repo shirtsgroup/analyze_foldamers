@@ -261,3 +261,135 @@ def test_ramachandran_calc_dcd(tmpdir):
     # Fit ramachandran data to 2d Gaussian:
     param_opt, param_cov = fit_ramachandran_data(rama_hist, xedges, yedges)    
     
+    
+def test_2d_dist_bond_bond_dcd(tmpdir):
+    """Test general 2d histogram - bond-bond correlation"""
+    output_directory = tmpdir.mkdir("output")
+    
+    # Load in a trajectory pdb file:
+    traj_file = os.path.join(data_path, "replica_1.dcd")
+    
+    # Load in a CGModel:
+    cgmodel_path = os.path.join(data_path, "stored_cgmodel.pkl")
+    cgmodel = pickle.load(open(cgmodel_path, "rb"))
+
+    hist_out, xedges, yedges = calc_2d_distribution(
+        cgmodel,
+        traj_file,
+        plotfile=f"{output_directory}/bond_bond_2d.pdf",
+        xvar_name='bb_bb',
+        yvar_name='bb_sc',
+    )
+     
+    assert os.path.isfile(f"{output_directory}/bond_bond_2d.pdf")
+    
+    
+def test_2d_dist_bond_angle_dcd(tmpdir):
+    """Test general 2d histogram - bond-angle correlation"""
+    output_directory = tmpdir.mkdir("output")
+    
+    # Load in a trajectory pdb file:
+    traj_file = os.path.join(data_path, "replica_1.dcd")
+    
+    # Load in a CGModel:
+    cgmodel_path = os.path.join(data_path, "stored_cgmodel.pkl")
+    cgmodel = pickle.load(open(cgmodel_path, "rb"))
+
+    hist_out, xedges, yedges = calc_2d_distribution(
+        cgmodel,
+        traj_file,
+        plotfile=f"{output_directory}/bond_angle_2d.pdf",
+        xvar_name='bb_bb',
+        yvar_name='bb_bb_sc',
+    )
+     
+    assert os.path.isfile(f"{output_directory}/bond_angle_2d.pdf")     
+    
+    
+def test_2d_dist_bond_torsion_dcd(tmpdir):
+    """Test general 2d histogram - bond-torsion correlation"""
+    output_directory = tmpdir.mkdir("output")
+    
+    # Load in a trajectory pdb file:
+    traj_file = os.path.join(data_path, "replica_1.dcd")
+    
+    # Load in a CGModel:
+    cgmodel_path = os.path.join(data_path, "stored_cgmodel.pkl")
+    cgmodel = pickle.load(open(cgmodel_path, "rb"))
+
+    hist_out, xedges, yedges = calc_2d_distribution(
+        cgmodel,
+        traj_file,
+        plotfile=f"{output_directory}/bond_torsion_2d.pdf",
+        xvar_name='bb_bb',
+        yvar_name='bb_bb_bb_sc',
+    )
+     
+    assert os.path.isfile(f"{output_directory}/bond_torsion_2d.pdf")
+    
+
+def test_2d_dist_angle_angle_dcd(tmpdir):
+    """Test general 2d histogram - angle-angle correlation"""
+    output_directory = tmpdir.mkdir("output")
+    
+    # Load in a trajectory pdb file:
+    traj_file = os.path.join(data_path, "replica_1.dcd")
+    
+    # Load in a CGModel:
+    cgmodel_path = os.path.join(data_path, "stored_cgmodel.pkl")
+    cgmodel = pickle.load(open(cgmodel_path, "rb"))
+
+    hist_out, xedges, yedges = calc_2d_distribution(
+        cgmodel,
+        traj_file,
+        plotfile=f"{output_directory}/angle_angle_2d.pdf",
+        xvar_name='bb_bb_bb',
+        yvar_name='sc_bb_bb',
+    )
+     
+    assert os.path.isfile(f"{output_directory}/angle_angle_2d.pdf")
+    
+    
+def test_2d_dist_angle_torsion_dcd(tmpdir):
+    """Test general 2d histogram - angle-torsion correlation"""
+    output_directory = tmpdir.mkdir("output")
+    
+    # Load in a trajectory pdb file:
+    traj_file = os.path.join(data_path, "replica_1.dcd")
+    
+    # Load in a CGModel:
+    cgmodel_path = os.path.join(data_path, "stored_cgmodel.pkl")
+    cgmodel = pickle.load(open(cgmodel_path, "rb"))
+
+    hist_out, xedges, yedges = calc_2d_distribution(
+        cgmodel,
+        traj_file,
+        plotfile=f"{output_directory}/angle_torsion_2d.pdf",
+        xvar_name='bb_bb_sc',
+        yvar_name='bb_bb_bb_sc',
+    )
+     
+    assert os.path.isfile(f"{output_directory}/angle_torsion_2d.pdf")   
+
+
+def test_2d_dist_torsion_torsion_dcd(tmpdir):
+    """Test general 2d histogram - torsion-torsion correlation"""
+    output_directory = tmpdir.mkdir("output")
+    
+    # Load in a trajectory pdb file:
+    traj_file = os.path.join(data_path, "replica_1.dcd")
+    
+    # Load in a CGModel:
+    cgmodel_path = os.path.join(data_path, "stored_cgmodel.pkl")
+    cgmodel = pickle.load(open(cgmodel_path, "rb"))
+
+    hist_out, xedges, yedges = calc_2d_distribution(
+        cgmodel,
+        traj_file,
+        plotfile=f"{output_directory}/torsion_torsion_2d.pdf",
+        xvar_name='bb_bb_bb_sc',
+        yvar_name='sc_bb_bb_sc',
+    )
+     
+    assert os.path.isfile(f"{output_directory}/torsion_torsion_2d.pdf")       
+    
