@@ -120,7 +120,11 @@ def get_cluster_medoid_positions_KMedoids(
     """
     
     if not os.path.exists(output_dir):
-        os.mkdir(output_dir)    
+        os.mkdir(output_dir)
+
+    top_from_pdb = None
+    if cgmodel is None:
+        top_from_pdb = file_list[0]
     
     distances, traj_all = get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end)
     
@@ -160,7 +164,7 @@ def get_cluster_medoid_positions_KMedoids(
         medoid_xyz[k,:,:] = traj_all[medoid_indices[k]].xyz[0]
         
     # Write medoids to file
-    write_medoids_to_file(cgmodel, medoid_xyz, output_dir, output_format)
+    write_medoids_to_file(cgmodel, medoid_xyz, output_dir, output_format, top_from_pdb = top_from_pdb)
     medoid_positions = medoid_xyz * unit.nanometer
     
     # Get indices of frames in each cluster:
@@ -184,6 +188,9 @@ def get_cluster_medoid_positions_KMedoids(
         cluster_rmsd[k] = np.sqrt(cluster_rmsd[k])  
 
     # Get silhouette scores
+
+    return (medoid_positions, cluster_sizes, cluster_rmsd)
+    
     silhouette_avg = silhouette_score(distances, kmedoids.labels_)
     silhouette_sample_values = silhouette_samples(distances, kmedoids.labels_)
     
@@ -714,7 +721,7 @@ def get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end):
     return distances, traj_all
     
 
-def write_medoids_to_file(cgmodel, medoid_positions, output_dir, output_format):
+def write_medoids_to_file(cgmodel, medoid_positions, output_dir, output_format, top_from_pdb = None):
     """Internal function for writing medoid coordinates to file"""
 
     # Write medoids to file
@@ -726,15 +733,29 @@ def write_medoids_to_file(cgmodel, medoid_positions, output_dir, output_format):
     for k in range(n_clusters):
         positions = medoid_positions[k] * unit.nanometer
         file_name = str(f"{output_dir}/medoid_{k}.{output_format}")
-        if output_format=="dcd":
-            dcdtraj = md.Trajectory(
+
+        if cgmodel is None:
+            # Case for when no CG model is provided
+            temp_traj = md.load(top_from_pdb)
+            top = temp_traj.topology
+
+            traj = md.Trajectory(
                 xyz=positions.value_in_unit(unit.nanometer),
-                topology=md.Topology.from_openmm(cgmodel.topology),
+                topology = top
             )
-            md.Trajectory.save_dcd(dcdtraj,file_name)
+
+            traj.save_pdb(file_name)
+
         else:
-            cgmodel.positions = positions
-            write_pdbfile_without_topology(cgmodel, file_name)
+            if output_format=="dcd":
+                dcdtraj = md.Trajectory(
+                    xyz=positions.value_in_unit(unit.nanometer),
+                    topology=md.Topology.from_openmm(cgmodel.topology),
+                )
+                md.Trajectory.save_dcd(dcdtraj,file_name)
+            else:
+                cgmodel.positions = positions
+                write_pdbfile_without_topology(cgmodel, file_name)
             
     return
         
