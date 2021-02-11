@@ -1001,8 +1001,8 @@ def plot_2d_distribution(file_list, xvar_val_array, yvar_val_array, xvar_bin_edg
                 ax.text(
                     (xlim[0]+0.1*(xlim[1]-xlim[0])),
                     (ylim[0]+0.1*(ylim[1]-ylim[0])),
-                    f'{temperature_list[subplot_id].value_in_unit(unit.kelvin):<.2f} K',
-                    {'fontsize': 12,'color': 'w'},
+                    f'{temperature_list[subplot_id-1].value_in_unit(unit.kelvin):<.2f} K',
+                    {'fontsize': 10,'color': 'w'},
                     )
         
         if ncol > 1 and nrow == 1:
@@ -1022,8 +1022,8 @@ def plot_2d_distribution(file_list, xvar_val_array, yvar_val_array, xvar_bin_edg
                 ax.text(
                     (xlim[0]+0.1*(xlim[1]-xlim[0])),
                     (ylim[0]+0.1*(ylim[1]-ylim[0])),
-                    f'{temperature_list[subplot_id].value_in_unit(unit.kelvin):<.2f} K',
-                    {'fontsize': 12,'color': 'w'},
+                    f'{temperature_list[subplot_id-1].value_in_unit(unit.kelvin):<.2f} K',
+                    {'fontsize': 10,'color': 'w'},
                     )
             
         if ncol == 1 and nrow == 1:
@@ -1043,8 +1043,8 @@ def plot_2d_distribution(file_list, xvar_val_array, yvar_val_array, xvar_bin_edg
                 ax.text(
                     (xlim[0]+0.1*(xlim[1]-xlim[0])),
                     (ylim[0]+0.1*(ylim[1]-ylim[0])),
-                    f'{temperature_list[subplot_id].value_in_unit(unit.kelvin):<.2f} K',
-                    {'fontsize': 12,'color': 'w'},
+                    f'{temperature_list[subplot_id-1].value_in_unit(unit.kelvin):<.2f} K',
+                    {'fontsize': 10,'color': 'w'},
                     )            
         
         
