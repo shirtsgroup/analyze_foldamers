@@ -388,7 +388,8 @@ def calc_2d_distribution(
     plotfile="2d_hist.pdf",
     xvar_name = "bb_bb_bb",
     yvar_name = "bb_bb_bb_bb",
-    colormap="Spectral",
+    colormap="nipy_spectral",
+    temperature_list=None,
     ):      
 
     """
@@ -425,8 +426,11 @@ def calc_2d_distribution(
     :param yvar_name: particle sequence of the y bonded parameter (default="bb_bb_bb_bb")
     :type yvar_name: str    
     
-    :param colormap: matplotlib pyplot colormap to use (default='Spectral')
+    :param colormap: matplotlib pyplot colormap to use (default='nipy_spectral')
     :type colormap: str (case sensitive)
+    
+    :param temperature_list: list of temperatures corresponding to file_list. If None, no subplot labels will be used.
+    :type temperature_list: list(Quantity()) 
     
     :returns:
        - hist_data ( dict )
@@ -711,7 +715,7 @@ def calc_2d_distribution(
     # 2d histogram the data and plot:
     hist_data, xedges, yedges = plot_2d_distribution(
         file_list, xvar_val_array_combo, yvar_val_array_combo, xvar_bin_edges, yvar_bin_edges,
-        plotfile, colormap, xlabel, ylabel)
+        plotfile, colormap, xlabel, ylabel, temperature_list=temperature_list)
     
     return hist_data, xedges, yedges
     
@@ -727,7 +731,8 @@ def calc_ramachandran(
     plotfile="ramachandran.pdf",
     backbone_angle_type = "bb_bb_bb",
     backbone_torsion_type = "bb_bb_bb_bb",
-    colormap="Spectral",
+    colormap="nipy_spectral",
+    temperature_list=None,
 ):
     """
     Calculate and plot ramachandran plot for backbone bond bending-angle and torsion
@@ -763,8 +768,11 @@ def calc_ramachandran(
     :param backbone_torsion_type: particle sequence of the backbone angles (default="bb_bb_bb_bb") - for now only single sequence permitted
     :type backbone_torsion_type: str    
     
-    :param colormap: matplotlib pyplot colormap to use (default='Spectral')
+    :param colormap: matplotlib pyplot colormap to use (default='nipy_spectral')
     :type colormap: str (case sensitive)
+    
+    :param temperature_list: list of temperatures corresponding to file_list. If None, no subplot labels will be used.
+    :type temperature_list: list(Quantity())    
     
     :returns:
        - hist_data ( dict )
@@ -855,13 +863,13 @@ def calc_ramachandran(
     # 2d histogram the data and plot:
     hist_data, xedges, yedges = plot_2d_distribution(
         file_list, torsion_val_array, ang_val_array, torsion_bin_edges, angle_bin_edges,
-        plotfile, colormap, xlabel='Alpha (degrees)', ylabel='Theta (degrees)')
+        plotfile, colormap, xlabel='Alpha (degrees)', ylabel='Theta (degrees)', temperature_list=temperature_list)
     
     return hist_data, xedges, yedges
     
     
 def plot_2d_distribution(file_list, xvar_val_array, yvar_val_array, xvar_bin_edges, yvar_bin_edges,
-    plotfile, colormap, xlabel, ylabel): 
+    plotfile, colormap, xlabel, ylabel, temperature_list=None): 
     """Internal function for 2d histogramming bonded observable data and creating 2d plots"""
     
     # Store 2d histogram output
@@ -986,6 +994,16 @@ def plot_2d_distribution(file_list, xvar_val_array, yvar_val_array, xvar_bin_edg
                 cmap=cmap,
                 norm=norm,
             )
+            
+            if temperature_list is not None:
+                xlim = ax.get_xlim()
+                ylim = ax.get_ylim()
+                ax.text(
+                    (xlim[0]+0.1*(xlim[1]-xlim[0])),
+                    (ylim[0]+0.1*(ylim[1]-ylim[0])),
+                    f'{temperature_list[subplot_id-1].value_in_unit(unit.kelvin):<.2f} K',
+                    {'fontsize': 10,'color': 'w'},
+                    )
         
         if ncol > 1 and nrow == 1:
             ax = figure.add_subplot(fig_specs[row,col])
@@ -998,6 +1016,16 @@ def plot_2d_distribution(file_list, xvar_val_array, yvar_val_array, xvar_bin_edg
                 norm=norm,
             )
             
+            if temperature_list is not None:
+                xlim = ax.get_xlim()
+                ylim = ax.get_ylim()
+                ax.text(
+                    (xlim[0]+0.1*(xlim[1]-xlim[0])),
+                    (ylim[0]+0.1*(ylim[1]-ylim[0])),
+                    f'{temperature_list[subplot_id-1].value_in_unit(unit.kelvin):<.2f} K',
+                    {'fontsize': 10,'color': 'w'},
+                    )
+            
         if ncol == 1 and nrow == 1:
             ax = figure.add_subplot(fig_specs[row,col])
             hist_data_out, xedges_out, yedges_out, image_out = ax.hist2d(
@@ -1007,7 +1035,17 @@ def plot_2d_distribution(file_list, xvar_val_array, yvar_val_array, xvar_bin_edg
                 density=True,
                 cmap=cmap,
                 norm=norm,
-            )                
+            )
+
+            if temperature_list is not None:
+                xlim = ax.get_xlim()
+                ylim = ax.get_ylim()
+                ax.text(
+                    (xlim[0]+0.1*(xlim[1]-xlim[0])),
+                    (ylim[0]+0.1*(ylim[1]-ylim[0])),
+                    f'{temperature_list[subplot_id-1].value_in_unit(unit.kelvin):<.2f} K',
+                    {'fontsize': 10,'color': 'w'},
+                    )            
         
         
         hist_data[file[:-4]] = hist_data_out

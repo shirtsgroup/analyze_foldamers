@@ -96,9 +96,10 @@ def orient_along_z_axis(cgmodel, plot_projections=False):
         ]
     )
     # 1) Get the backbone particle positions
+    # We should be able to input the particle type name(s) of the backbone bead
     backbone_positions = []
     for particle in range(len(cgmodel.positions)):
-        if cgmodel.get_particle_type(particle) == "backbone":
+        if cgmodel.get_particle_type_name(particle) == "bb":
             backbone_positions.append(cgmodel.positions[particle])
     backbone_positions = np.array(
         [
@@ -219,7 +220,7 @@ def show_helical_fit(cgmodel):
     )
     backbone_positions = []
     for particle in range(len(cgmodel.positions)):
-        if cgmodel.get_particle_type(particle) == "backbone":
+        if cgmodel.get_particle_type_name(particle) == "bb":
             backbone_positions.append(cgmodel.positions[particle])
     backbone_positions = np.array(
         [
@@ -267,7 +268,7 @@ def calculate_p2(cgmodel):
     # 1) Get the backbone particle positions
     backbone_positions = []
     for particle in range(len(cgmodel.positions)):
-        if cgmodel.get_particle_type(particle) == "backbone":
+        if cgmodel.get_particle_type_name(particle) == "bb":
             backbone_positions.append(cgmodel.positions[particle])
     backbone_positions = np.array(
         [
@@ -371,7 +372,7 @@ def get_helical_data(cgmodel):
     # Get the new backbone particle positions
     backbone_positions = []
     for particle in range(len(cgmodel.positions)):
-        if cgmodel.get_particle_type(particle) == "backbone":
+        if cgmodel.get_particle_type_name(particle) == "bb":
             backbone_positions.append(cgmodel.positions[particle])
     backbone_positions = np.array(
         [
