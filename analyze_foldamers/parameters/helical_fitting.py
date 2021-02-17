@@ -66,7 +66,6 @@ def get_helical_parameters(cgmodel,structure_file=None,
             
         cgmodel.positions = traj.xyz[0]*unit.nanometer
 
-    print(cgmodel.positions)    
     # Orient positions in cgmodel along z axis:
     cgmodel = orient_along_z_axis(cgmodel)
     
