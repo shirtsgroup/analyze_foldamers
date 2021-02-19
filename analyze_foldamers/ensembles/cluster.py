@@ -273,12 +273,16 @@ def get_cluster_medoid_positions_DBSCAN(
     
     if filter:
         # Filter distances:
+        
+        if return_original_indices:
+            distances, dense_indices, filter_ratio_actual, original_indices = \
+                filter_distances(distances, filter_ratio=filter_ratio, return_original_indices = True, original_indices = original_indices)
+
         distances, dense_indices, filter_ratio_actual = \
             filter_distances(distances, filter_ratio=filter_ratio)
         
         traj_all = traj_all[dense_indices]
 
-    
     if plot_rmsd_hist:
         # Plot rmsd histogram:
         distances_row = np.reshape(distances, (distances.shape[0]*distances.shape[1],1))
@@ -371,6 +375,9 @@ def get_cluster_medoid_positions_DBSCAN(
     except ValueError:
         print("There are either no clusters, or no noise points identified. Try adjusting DBSCAN min_samples, eps parameters.")
         silhouette_avg = None
+
+    if return_original_indices:
+            return medoid_positions, cluster_sizes, cluster_rmsd, n_noise, labels, silhouette_avg, original_indices
 
     return medoid_positions, cluster_sizes, cluster_rmsd, n_noise, labels, silhouette_avg  
     
@@ -537,7 +544,7 @@ def get_cluster_medoid_positions_OPTICS(
     return medoid_positions, cluster_sizes, cluster_rmsd, n_noise, silhouette_avg
     
     
-def filter_distances(distances, filter_ratio=0.05):
+def filter_distances(distances, filter_ratio=0.05, return_original_indices = False, original_indices = None):
     """
     Function for filtering out data points with few neighbors within a cutoff radius
     
@@ -593,6 +600,9 @@ def filter_distances(distances, filter_ratio=0.05):
     # Need to select 1 dimension at a time:
     distances_filtered = distances[:,neighbors_dense]
     distances_filtered = distances_filtered[neighbors_dense,:]
+
+    if return_original_indices:
+        original_indices = original_indices[neighbors_dense]
     
     filter_ratio_actual = len(neighbors_dense)/len(neighbors)
     
@@ -600,6 +610,9 @@ def filter_distances(distances, filter_ratio=0.05):
     print(f"cutoff radius = {cutoff_radius}")
     print(f"number neighbors cutoff: {density_cutoff}")
     
+    if return_original_indices:
+        return distances_filtered, neighbors_dense, filter_ratio_actual, original_indices
+
     return distances_filtered, neighbors_dense, filter_ratio_actual
     
 
@@ -721,12 +734,13 @@ def get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end, re
     if frame_start == -1:
         frame_start == frame_end
 
-    traj_all = rep_traj[0][frame_start:frame_end:frame_stride]
-
-    for i in range(len(file_list)-1):
-        traj_all = traj_all.join(rep_traj[i+1][frame_start:frame_end:frame_stride])
+    for i in range(len(file_list)):
+        if i == 0:
+            traj_all = rep_traj[i][frame_start:frame_end:frame_stride]
+        else:
+            traj_all = traj_all.join(rep_traj[i][frame_start:frame_end:frame_stride])
         if return_original_indices:
-            original_indices[i] = original_indices[frame_start:frame_end:frame_stride]
+            original_indices[i] = original_indices[i][frame_start:frame_end:frame_stride]
 
 
     # Align structures with first frame as reference:
@@ -740,7 +754,7 @@ def get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end, re
         distances[i] = md.rmsd(traj_all, traj_all, i)
     
     if return_original_indices:
-        original_indices = np.array(original_indices)
+        original_indices = np.concatenate(original_indices)
         return distances, traj_all, original_indices.reshape(-1)
 
     return distances, traj_all
