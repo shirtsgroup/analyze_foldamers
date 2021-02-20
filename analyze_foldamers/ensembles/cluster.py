@@ -72,7 +72,7 @@ def get_cluster_medoid_positions_KMedoids(
     file_list, cgmodel, n_clusters=2,
     frame_start=0, frame_stride=1, frame_end=-1,
     output_format="pdb", output_dir="cluster_output",
-    plot_silhouette=True, plot_rmsd_hist=True, filter=False, filter_ratio=0.05):    
+    plot_silhouette=True, plot_rmsd_hist=True, filter=False, filter_ratio=0.05, return_original_indices = False):    
     """
     Given PDB or DCD trajectory files and coarse grained model as input, this function performs K-medoids clustering on the poses in trajectory, and returns a list of the coordinates for the medoid pose of each cluster.
 
@@ -126,6 +126,8 @@ def get_cluster_medoid_positions_KMedoids(
     if cgmodel is None:
         top_from_pdb = file_list[0]
     
+    if return_original_indices:
+        distances, traj_all, original_indices = get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end, return_original_indices=True)
     distances, traj_all = get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end)
     
     if filter:
@@ -201,7 +203,13 @@ def get_cluster_medoid_positions_KMedoids(
             n_clusters, cluster_rmsd, cluster_sizes, plotfile
             )        
     
-        return medoid_positions, cluster_sizes, cluster_rmsd, silhouette_avg
+    if return_original_indices:
+        return medoid_positions, cluster_sizes, cluster_rmsd, silhouette_avg,  labels, original_indices
+
+    return medoid_positions, cluster_sizes, cluster_rmsd, silhouette_avg
+
+    if return_original_indices:
+        return medoid_positions, cluster_sizes, cluster_rmsd, labels, original_indices
 
     return medoid_positions, cluster_sizes, cluster_rmsd
 
@@ -377,7 +385,7 @@ def get_cluster_medoid_positions_DBSCAN(
         silhouette_avg = None
 
     if return_original_indices:
-            return medoid_positions, cluster_sizes, cluster_rmsd, n_noise, labels, silhouette_avg, original_indices
+            return medoid_positions, cluster_sizes, cluster_rmsd, n_noise, silhouette_avg, labels, original_indices
 
     return medoid_positions, cluster_sizes, cluster_rmsd, n_noise, silhouette_avg  
     

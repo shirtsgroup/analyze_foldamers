@@ -56,6 +56,44 @@ def test_clustering_kmedoids_pdb(tmpdir):
     assert os.path.isfile(f"{output_directory}/silhouette_kmedoids_ncluster_{n_clusters}.pdf") 
     assert os.path.isfile(f"{output_directory}/distances_rmsd_hist.pdf")
     
+
+def test_clustering_kmedoids_pdb_no_cgmodel(tmpdir):
+    """Test Kmeans clustering without a cgmodel"""
+    
+    output_directory = tmpdir.mkdir("output")
+    
+    # Create list of trajectory files for clustering analysis
+    number_replicas = 12
+    pdb_file_list = []
+    for i in range(number_replicas):
+        pdb_file_list.append(f"{data_path}/replica_%s.pdb" %(i+1))
+
+    # Set clustering parameters
+    n_clusters=2
+    frame_start=10
+    frame_stride=1
+    frame_end=-1
+
+    # Run KMeans clustering
+    medoid_positions, cluster_size, cluster_rmsd, silhouette_avg = \
+        get_cluster_medoid_positions_KMedoids(
+            pdb_file_list,
+            cgmodel=None,
+            n_clusters=n_clusters,
+            frame_start=frame_start,
+            frame_stride=frame_stride,
+            frame_end=-1,
+            output_dir=output_directory,
+            plot_silhouette=True,
+            plot_rmsd_hist=True,
+            filter=True,
+            filter_ratio=0.20,
+        )
+    
+    assert len(cluster_rmsd) == n_clusters
+    assert os.path.isfile(f"{output_directory}/medoid_1.pdb")
+    assert os.path.isfile(f"{output_directory}/silhouette_kmedoids_ncluster_{n_clusters}.pdf") 
+    assert os.path.isfile(f"{output_directory}/distances_rmsd_hist.pdf")
     
 def test_clustering_kmedoids_dcd(tmpdir):
     """Test KMedoids clustering"""
@@ -123,11 +161,49 @@ def test_clustering_dbscan_pdb(tmpdir):
     frame_stride=1
     frame_end=-1
 
-    # Run OPTICS density-based clustering
+    # Run DBSCAN density-based clustering
     medoid_positions, cluster_sizes, cluster_rmsd, n_noise, silhouette_avg = \
         get_cluster_medoid_positions_DBSCAN(
             pdb_file_list,
             cgmodel,
+            min_samples=min_samples,
+            eps=eps,
+            frame_start=frame_start,
+            frame_stride=frame_stride,
+            frame_end=-1,
+            output_dir=output_directory,
+            plot_silhouette=True,
+            plot_rmsd_hist=True,
+            filter=True,
+            filter_ratio=0.20,
+        )
+    
+    assert os.path.isfile(f"{output_directory}/medoid_0.pdb")
+    assert os.path.isfile(f"{output_directory}/distances_rmsd_hist.pdf")
+
+def test_clustering_dbscan_pdb_no_cgmodel(tmpdir):
+    """Test DBSCAN clustering without cgmodel object"""
+    
+    output_directory = tmpdir.mkdir("output")
+    
+    # Create list of trajectory files for clustering analysis
+    number_replicas = 12
+    pdb_file_list = []
+    for i in range(number_replicas):
+        pdb_file_list.append(f"{data_path}/replica_%s.pdb" %(i+1))
+
+    # Set clustering parameters
+    min_samples=3
+    eps=0.5
+    frame_start=10
+    frame_stride=1
+    frame_end=-1
+
+    # Run DBSCAN density-based clustering
+    medoid_positions, cluster_sizes, cluster_rmsd, n_noise, silhouette_avg = \
+        get_cluster_medoid_positions_DBSCAN(
+            pdb_file_list,
+            None,
             min_samples=min_samples,
             eps=eps,
             frame_start=frame_start,
@@ -227,6 +303,43 @@ def test_clustering_optics_pdb(tmpdir):
     
     assert os.path.isfile(f"{output_directory}/medoid_0.pdb")
     assert os.path.isfile(f"{output_directory}/distances_rmsd_hist.pdf") 
+
+def test_clustering_optics_pdb_no_cgmodel(tmpdir):
+    """Test OPTICS clustering without a cgmodel object"""
+    
+    output_directory = tmpdir.mkdir("output")
+    
+    # Create list of trajectory files for clustering analysis
+    number_replicas = 12
+    pdb_file_list = []
+    for i in range(number_replicas):
+        pdb_file_list.append(f"{data_path}/replica_%s.pdb" %(i+1))
+
+    # Set clustering parameters
+    min_samples=5
+    frame_start=10
+    frame_stride=1
+    frame_end=-1
+
+    # Run OPTICS density-based clustering
+    medoid_positions, cluster_sizes, cluster_rmsd, n_noise, silhouette_avg = \
+        get_cluster_medoid_positions_OPTICS(
+            pdb_file_list,
+            None,
+            min_samples=min_samples,
+            frame_start=frame_start,
+            frame_stride=frame_stride,
+            frame_end=-1,
+            output_dir=output_directory,
+            plot_silhouette=True,
+            plot_rmsd_hist=True,
+            filter=True,
+            filter_ratio=0.20,
+        )
+    
+    assert os.path.isfile(f"{output_directory}/medoid_0.pdb")
+    assert os.path.isfile(f"{output_directory}/distances_rmsd_hist.pdf") 
+
 
     
 def test_clustering_optics_dcd(tmpdir):
