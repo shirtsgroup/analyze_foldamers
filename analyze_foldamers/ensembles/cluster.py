@@ -201,9 +201,9 @@ def get_cluster_medoid_positions_KMedoids(
             n_clusters, cluster_rmsd, cluster_sizes, plotfile
             )        
     
-        return (medoid_positions, cluster_sizes, cluster_rmsd, cluster_indices, silhouette_avg)
+        return medoid_positions, cluster_sizes, cluster_rmsd, silhouette_avg
 
-    return (medoid_positions, cluster_sizes, cluster_rmsd, cluster_indices)
+    return medoid_positions, cluster_sizes, cluster_rmsd
 
 
     
@@ -379,7 +379,7 @@ def get_cluster_medoid_positions_DBSCAN(
     if return_original_indices:
             return medoid_positions, cluster_sizes, cluster_rmsd, n_noise, labels, silhouette_avg, original_indices
 
-    return medoid_positions, cluster_sizes, cluster_rmsd, n_noise, labels, silhouette_avg  
+    return medoid_positions, cluster_sizes, cluster_rmsd, n_noise, silhouette_avg  
     
     
 def get_cluster_medoid_positions_OPTICS(
@@ -434,7 +434,11 @@ def get_cluster_medoid_positions_OPTICS(
     """    
     
     if not os.path.exists(output_dir):
-        os.mkdir(output_dir)     
+        os.mkdir(output_dir)
+
+    top_from_pdb = None
+    if cgmodel is None:
+        top_from_pdb = file_list[0]
     
     distances, traj_all = get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end)
     
@@ -514,7 +518,7 @@ def get_cluster_medoid_positions_OPTICS(
         medoid_xyz[k,:,:] = traj_all[medoid_index[k]].xyz[0]
         
     # Write medoids to file
-    write_medoids_to_file(cgmodel, medoid_xyz, output_dir, output_format)
+    write_medoids_to_file(cgmodel, medoid_xyz, output_dir, output_format, top_from_pdb=top_from_pdb)
     medoid_positions = medoid_xyz * unit.nanometer
     
     # Compute intra-cluster rmsd of samples to medoid based on structure rmsd
