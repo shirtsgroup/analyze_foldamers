@@ -132,10 +132,12 @@ def get_cluster_medoid_positions_KMedoids(
     
     if filter:
         # Filter distances:
-        distances, dense_indices, filter_ratio_actual = \
-            filter_distances(distances, filter_ratio=filter_ratio)
-        
-        traj_all = traj_all[dense_indices]
+        if return_original_indices:
+            distances, dense_indices, filter_ratio_actual, original_indices = \
+                filter_distances(distances, filter_ratio=filter_ratio, return_original_indices = True, original_indices = original_indices)
+        else:
+            distances, dense_indices, filter_ratio_actual = \
+                filter_distances(distances, filter_ratio=filter_ratio)
     
     if plot_rmsd_hist:
         distances_row = np.reshape(distances, (distances.shape[0]*distances.shape[1],1))
@@ -276,7 +278,8 @@ def get_cluster_medoid_positions_DBSCAN(
 
     if return_original_indices:
         distances, traj_all, original_indices = get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end, return_original_indices=True)
-    distances, traj_all = get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end)
+    else:
+        distances, traj_all = get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end)
     
     
     if filter:
@@ -285,9 +288,9 @@ def get_cluster_medoid_positions_DBSCAN(
         if return_original_indices:
             distances, dense_indices, filter_ratio_actual, original_indices = \
                 filter_distances(distances, filter_ratio=filter_ratio, return_original_indices = True, original_indices = original_indices)
-
-        distances, dense_indices, filter_ratio_actual = \
-            filter_distances(distances, filter_ratio=filter_ratio)
+        else:
+            distances, dense_indices, filter_ratio_actual = \
+                filter_distances(distances, filter_ratio=filter_ratio)
         
         traj_all = traj_all[dense_indices]
 
