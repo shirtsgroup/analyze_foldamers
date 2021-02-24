@@ -72,7 +72,8 @@ def get_cluster_medoid_positions_KMedoids(
     file_list, cgmodel, n_clusters=2,
     frame_start=0, frame_stride=1, frame_end=-1,
     output_format="pdb", output_dir="cluster_output",
-    plot_silhouette=True, plot_rmsd_hist=True, filter=False, filter_ratio=0.05, return_original_indices = False):    
+    ouput_cluster_traj = False, plot_silhouette=True, plot_rmsd_hist=True,
+    filter=False, filter_ratio=0.05, return_original_indices = False):
     """
     Given PDB or DCD trajectory files and coarse grained model as input, this function performs K-medoids clustering on the poses in trajectory, and returns a list of the coordinates for the medoid pose of each cluster.
 
@@ -99,6 +100,9 @@ def get_cluster_medoid_positions_KMedoids(
     
     :param output_dir: path to which cluster medoid structures and silhouette plots will be saved
     :type output_dir: str
+
+    :param ouput_cluster_traj: option to output the trajectory of each cluster along with each medoid
+    :type ouput_cluster_traj: boolean
     
     :param plot_silhouette: option to create silhouette plot of clustering results (default=True)
     :type plot_silhouette: boolean
@@ -111,7 +115,10 @@ def get_cluster_medoid_positions_KMedoids(
     
     :param filter_ratio: fraction of data points which pass through the neighborhood radius filter (default=0.05)
     :type filter_ratio: float
-    
+
+    :param return_original_indices: option to return the original indicies and labels of clustered structures
+    :type return_original_indices: boolean
+
     :returns:
        - medoid_positions ( np.array( float * unit.angstrom ( n_clusters x num_particles x 3 ) ) ) - A 3D numpy array of poses corresponding to the medoids of all trajectory clusters.
        - cluster_sizes ( List ( int ) ) - A list of number of members in each cluster 
@@ -171,6 +178,10 @@ def get_cluster_medoid_positions_KMedoids(
     write_medoids_to_file(cgmodel, medoid_xyz, output_dir, output_format, top_from_pdb = top_from_pdb)
     medoid_positions = medoid_xyz * unit.nanometer
     
+    # Write clusters to file
+    if output_cluster_traj:
+        write_clusters_to_file(labels, traj_all, output_dir, output_format)
+
     # Get indices of frames in each cluster:
     cluster_indices = {}
     cluster_sizes = []   
@@ -192,7 +203,6 @@ def get_cluster_medoid_positions_KMedoids(
         cluster_rmsd[k] = np.sqrt(cluster_rmsd[k])  
 
     # Get silhouette scores
-    #     
     silhouette_avg = silhouette_score(distances, kmedoids.labels_)
     silhouette_sample_values = silhouette_samples(distances, kmedoids.labels_)
     
@@ -219,7 +229,7 @@ def get_cluster_medoid_positions_KMedoids(
     
 def get_cluster_medoid_positions_DBSCAN(
     file_list, cgmodel, min_samples=5, eps=0.5,
-    frame_start=0, frame_stride=1, frame_end=-1, output_format="pdb", output_dir="cluster_output",
+    frame_start=0, frame_stride=1, frame_end=-1, output_format="pdb", output_dir="cluster_output", output_cluster_traj = False,
     plot_silhouette=True, plot_rmsd_hist=True, filter=True, filter_ratio=0.05, return_original_indices = False):
     """
     Given PDB or DCD trajectory files and coarse grained model as input, this function performs DBSCAN clustering on the poses in the trajectory, and returns a list of the coordinates for the medoid pose of each cluster.
@@ -363,6 +373,9 @@ def get_cluster_medoid_positions_DBSCAN(
     # Write medoids to file
     write_medoids_to_file(cgmodel, medoid_xyz, output_dir, output_format, top_from_pdb = top_from_pdb)
     medoid_positions = medoid_xyz * unit.nanometer
+
+    if output_cluster_traj:
+        write_clusters_to_file(labels, traj_all, output_dir, output_format)
     
     # Compute intra-cluster rmsd of samples to medoid based on structure rmsd  
     cluster_rmsd = np.zeros(n_clusters)
@@ -557,7 +570,6 @@ def get_cluster_medoid_positions_OPTICS(
         silhouette_avg = None
         
     return medoid_positions, cluster_sizes, cluster_rmsd, n_noise, silhouette_avg
-    
     
 def filter_distances(distances, filter_ratio=0.05, return_original_indices = False, original_indices = None):
     """
@@ -774,6 +786,23 @@ def get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end, re
 
     return distances, traj_all
     
+
+def write_clusters_to_file(labels, traj_all, output_dir, output_format):
+    """"""
+    # Write ouput directory
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
+
+    clusters = np.unique(labels)
+
+    for k in clusters:
+        cluster_indicies  = np.argwhere(labels == k)
+        if k == -1:
+            k = "noise"
+        file_name = str(f"{output_dir}/cluster_{k}.{output_format}")
+        cluster_traj = traj_all.slice(cluster_indicies.reshape(-1))
+        cluster_traj.save(file_name)
+
 
 def write_medoids_to_file(cgmodel, medoid_positions, output_dir, output_format, top_from_pdb = None):
     """Internal function for writing medoid coordinates to file"""
