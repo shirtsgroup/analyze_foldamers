@@ -426,3 +426,47 @@ def test_clustering_dbscan_pdb_return_indices(tmpdir):
     assert len(labels) == len(original_indices)
     assert os.path.isfile(f"{output_directory}/medoid_0.pdb")
     assert os.path.isfile(f"{output_directory}/distances_rmsd_hist.pdf")
+
+def test_clustering_dbscan_pdb_output_clusters(tmpdir):
+    """Test DBSCAN clustering"""
+    
+    output_directory = tmpdir.mkdir("output")
+    
+    # Load in cgmodel
+    cgmodel_path = os.path.join(data_path, "stored_cgmodel.pkl")
+    cgmodel = pickle.load(open(cgmodel_path, "rb"))
+    
+    # Create list of trajectory files for clustering analysis
+    number_replicas = 12
+    pdb_file_list = []
+    for i in range(number_replicas):
+        pdb_file_list.append(f"{data_path}/replica_%s.pdb" %(i+1))
+
+    # Set clustering parameters
+    min_samples=3
+    eps=0.5
+    frame_start=10
+    frame_stride=1
+    frame_end=-1
+
+    # Run DBSCAN density-based clustering
+    medoid_positions, cluster_sizes, cluster_rmsd, n_noise, \
+    silhouette_avg, labels, original_indices = \
+        get_cluster_medoid_positions_DBSCAN(
+            pdb_file_list,
+            cgmodel,
+            min_samples=min_samples,
+            eps=eps,
+            frame_start=frame_start,
+            frame_stride=frame_stride,
+            frame_end=-1,
+            output_dir=output_directory,
+            output_cluster_traj=True,
+            plot_silhouette=True,
+            plot_rmsd_hist=True,
+            filter=True,
+            filter_ratio=0.20,
+            return_original_indices=False
+        )
+    assert os.path.isfile(f"{output_directory}/medoid_0.pdb")
+    assert os.path.isfile(f"{output_directory}/cluster_0.pdb")
