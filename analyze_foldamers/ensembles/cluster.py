@@ -68,12 +68,13 @@ def get_representative_structures(
         
     return file_list_out
     
+    
 def get_cluster_medoid_positions_KMedoids(
     file_list, cgmodel, n_clusters=2,
     frame_start=0, frame_stride=1, frame_end=-1,
     output_format="pdb", output_dir="cluster_output",
-    ouput_cluster_traj = False, plot_silhouette=True, plot_rmsd_hist=True,
-    filter=False, filter_ratio=0.05, return_original_indices = False):
+    output_cluster_traj=False, plot_silhouette=True, plot_rmsd_hist=True,
+    filter=False, filter_ratio=0.25, return_original_indices=False):
     """
     Given PDB or DCD trajectory files and coarse grained model as input, this function performs K-medoids clustering on the poses in trajectory, and returns a list of the coordinates for the medoid pose of each cluster.
 
@@ -225,12 +226,13 @@ def get_cluster_medoid_positions_KMedoids(
 
     return medoid_positions, cluster_sizes, cluster_rmsd
 
-
     
 def get_cluster_medoid_positions_DBSCAN(
     file_list, cgmodel, min_samples=5, eps=0.5,
-    frame_start=0, frame_stride=1, frame_end=-1, output_format="pdb", output_dir="cluster_output", output_cluster_traj = False,
-    plot_silhouette=True, plot_rmsd_hist=True, filter=True, filter_ratio=0.05, return_original_indices = False):
+    frame_start=0, frame_stride=1, frame_end=-1, output_format="pdb",
+    output_dir="cluster_output", output_cluster_traj = False, plot_silhouette=True,
+    plot_rmsd_hist=True, filter=True, filter_ratio=0.25,
+    core_points_only=True, return_original_indices=False):
     """
     Given PDB or DCD trajectory files and coarse grained model as input, this function performs DBSCAN clustering on the poses in the trajectory, and returns a list of the coordinates for the medoid pose of each cluster.
 
@@ -269,6 +271,12 @@ def get_cluster_medoid_positions_DBSCAN(
     
     :param filter_ratio: fraction of data points which pass through the neighborhood radius filter (default=0.05)
     :type filter_ratio: float
+    
+    :param core_points_only: use only core points to calculate medoid structures (default=True)
+    :type core_points_only: boolean
+    
+    :param return_original_indices: option to return the original indicies and labels of clustered structures
+    :type return_original_indices: boolean
 
     :returns:
        - medoid_positions ( np.array( float * unit.angstrom ( n_clusters x num_particles x 3 ) ) ) - A 3D numpy array of poses corresponding to the medoids of all trajectory clusters.
@@ -326,6 +334,9 @@ def get_cluster_medoid_positions_DBSCAN(
     # Get labels
     labels = dbscan.labels_
     
+    # Get core sample indices:
+    core_sample_indices = dbscan.core_sample_indices_
+    
     # Number of clusters:
     n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
     
@@ -334,10 +345,18 @@ def get_cluster_medoid_positions_DBSCAN(
     
     # Get indices of frames in each cluster:
     cluster_indices = {}
-    cluster_sizes = []   
+    cluster_indices_core = {}
+    cluster_sizes = []
+    cluster_sizes_core = []
+    
     for k in range(n_clusters):
         cluster_indices[k] = np.argwhere(labels==k)[:,0]
+        cluster_indices_core[k] = []
+        for elem in cluster_indices[k]:  
+            if elem in core_sample_indices:
+                cluster_indices_core[k].append(elem)
         cluster_sizes.append(len(cluster_indices[k]))
+        cluster_sizes_core.append(len(cluster_indices_core[k]))
         
     # Get indices of frames classified as noise:
     noise_indices = np.argwhere(labels==-1)[:,0]
@@ -353,18 +372,40 @@ def get_cluster_medoid_positions_DBSCAN(
     
     # Create distance matrices within each cluster:
     distances_k = {}
-    for k in range(n_clusters):
-        distances_k[k] = np.zeros((cluster_sizes[k],cluster_sizes[k]))
-        for i in range(cluster_sizes[k]):
-            for j in range(cluster_sizes[k]):
-                distances_k[k][i,j] = distances[cluster_indices[k][i],cluster_indices[k][j]]
     
-    # Compute medoid based on similarity scores:
-    medoid_index = []
-    for k in range(n_clusters):
-        medoid_index.append(
-            np.exp(-distances_k[k] / distances_k[k].std()).sum(axis=1).argmax()
-        )
+    if core_points_only:
+        for k in range(n_clusters):
+            distances_k[k] = np.zeros((cluster_sizes_core[k],cluster_sizes_core[k]))
+            for i in range(cluster_sizes_core[k]):
+                for j in range(cluster_sizes_core[k]):
+                    distances_k[k][i,j] = distances[cluster_indices_core[k][i],cluster_indices_core[k][j]]
+        
+        # Compute medoid based on similarity scores:
+        medoid_index = [] # Global index
+        intra_cluster_medoid_index = [] # Index within cluster
+        for k in range(n_clusters):
+            intra_cluster_medoid_index.append(
+                np.exp(-distances_k[k]/distances_k[k].std()).sum(axis=1).argmax()
+            )
+            # Here we need to use the global sample index to find the medoid structure:
+            medoid_index.append(cluster_indices_core[k][intra_cluster_medoid_index[k]])    
+    
+    else:
+        for k in range(n_clusters):
+            distances_k[k] = np.zeros((cluster_sizes[k],cluster_sizes[k]))
+            for i in range(cluster_sizes[k]):
+                for j in range(cluster_sizes[k]):
+                    distances_k[k][i,j] = distances[cluster_indices[k][i],cluster_indices[k][j]]
+        
+        # Compute medoid based on similarity scores:
+        medoid_index = [] # Global index
+        intra_cluster_medoid_index = [] # Index within cluster
+        for k in range(n_clusters):
+            intra_cluster_medoid_index.append(
+                np.exp(-distances_k[k]/distances_k[k].std()).sum(axis=1).argmax()
+            )
+            # Here we need to use the global sample index to find the medoid structure:
+            medoid_index.append(cluster_indices[k][intra_cluster_medoid_index[k]])
         
     medoid_xyz = np.zeros([n_clusters,traj_all.n_atoms,3])
     for k in range(n_clusters):
@@ -377,11 +418,11 @@ def get_cluster_medoid_positions_DBSCAN(
     if output_cluster_traj:
         write_clusters_to_file(labels, traj_all, output_dir, output_format)
     
-    # Compute intra-cluster rmsd of samples to medoid based on structure rmsd  
+    # Compute intra-cluster rmsd of samples to medoid based on structure rmsd
     cluster_rmsd = np.zeros(n_clusters)
     
     for k in range(n_clusters):
-        cluster_rmsd[k] = np.sqrt(((distances_k[k][medoid_index[k]]**2).sum())/len(cluster_indices[k]))
+        cluster_rmsd[k] = np.sqrt(((distances_k[k][intra_cluster_medoid_index[k]]**2).sum())/len(cluster_indices[k]))
     
     # Get silhouette scores
     try:
@@ -531,12 +572,15 @@ def get_cluster_medoid_positions_OPTICS(
                 distances_k[k][i,j] = distances[cluster_indices[k][i],cluster_indices[k][j]]
     
     # Compute medoid based on similarity scores:
-    medoid_index = []
+    medoid_index = [] # Global index
+    intra_cluster_medoid_index = [] # Index within cluster
     for k in range(n_clusters):
-        medoid_index.append(
+        intra_cluster_medoid_index.append(
             np.exp(-distances_k[k] / distances_k[k].std()).sum(axis=1).argmax()
         )
-        
+        # Here we need to use the global sample index to find the medoid structure:
+        medoid_index.append(cluster_indices[k][intra_cluster_medoid_index[k]])
+            
     medoid_xyz = np.zeros([n_clusters,traj_all.n_atoms,3])
     for k in range(n_clusters):
         medoid_xyz[k,:,:] = traj_all[medoid_index[k]].xyz[0]
@@ -546,11 +590,10 @@ def get_cluster_medoid_positions_OPTICS(
     medoid_positions = medoid_xyz * unit.nanometer
     
     # Compute intra-cluster rmsd of samples to medoid based on structure rmsd
-    
     cluster_rmsd = np.zeros(n_clusters)
     
     for k in range(n_clusters):
-        cluster_rmsd[k] = np.sqrt(((distances_k[k][medoid_index[k]]**2).sum())/len(cluster_indices[k]))
+        cluster_rmsd[k] = np.sqrt(((distances_k[k][intra_cluster_medoid_index[k]]**2).sum())/len(cluster_indices[k]))
     
     # Get silhouette scores
     try:
@@ -570,6 +613,7 @@ def get_cluster_medoid_positions_OPTICS(
         silhouette_avg = None
         
     return medoid_positions, cluster_sizes, cluster_rmsd, n_noise, silhouette_avg
+    
     
 def filter_distances(distances, filter_ratio=0.05, return_original_indices = False, original_indices = None):
     """

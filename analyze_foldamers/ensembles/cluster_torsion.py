@@ -20,7 +20,7 @@ def cluster_torsions_KMedoids(
     frame_start=0, frame_stride=1, frame_end=-1,
     output_format="pdb", output_dir="cluster_output",
     backbone_torsion_type="bb_bb_bb_bb",
-    filter=False, filter_ratio=0.05, plot_silhouette=True, plot_distance_hist=True):
+    filter=False, filter_ratio=0.25, plot_silhouette=True, plot_distance_hist=True):
     """
     Given PDB or DCD trajectory files and coarse grained model as input, this function performs K-medoids clustering on the poses in trajectory, and returns a list of the coordinates for the medoid pose of each cluster.
 
@@ -173,8 +173,8 @@ def cluster_torsions_KMedoids(
 def cluster_torsions_DBSCAN(
     file_list, cgmodel, min_samples=5, eps=0.5,
     frame_start=0, frame_stride=1, frame_end=-1, output_format="pdb", output_dir="cluster_output",
-    backbone_torsion_type="bb_bb_bb_bb",
-    filter=True, filter_ratio=0.05, plot_silhouette=True, plot_distance_hist=True):
+    backbone_torsion_type="bb_bb_bb_bb", core_points_only=True,
+    filter=True, filter_ratio=0.25, plot_silhouette=True, plot_distance_hist=True):
     """
     Given PDB or DCD trajectory files and coarse grained model as input, this function performs DBSCAN clustering on the poses in the trajectory, and returns a list of the coordinates for the medoid pose of each cluster.
 
@@ -206,7 +206,10 @@ def cluster_torsions_DBSCAN(
     :type output_dir: str
     
     :param backbone_torsion_type: particle sequence of the backbone torsions (default="bb_bb_bb_bb") - for now only single sequence permitted
-    :type backbone_torsion_type: str    
+    :type backbone_torsion_type: str
+
+    :param core_points_only: use only core points to calculate medoid structures (default=True)
+    :type core_points_only: boolean    
     
     :param filter: option to apply neighborhood radius filtering to remove low-density data (default=True)
     :type filter: boolean
@@ -276,6 +279,9 @@ def cluster_torsions_DBSCAN(
     # Get labels
     labels = dbscan.labels_
     
+    # Get core sample indices:
+    core_sample_indices = dbscan.core_sample_indices_
+    
     # Number of clusters:
     n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
     
@@ -284,10 +290,18 @@ def cluster_torsions_DBSCAN(
     
     # Get indices of frames in each cluster:
     cluster_indices = {}
-    cluster_sizes = []   
+    cluster_indices_core = {}
+    cluster_sizes = []
+    cluster_sizes_core = []
+    
     for k in range(n_clusters):
         cluster_indices[k] = np.argwhere(labels==k)[:,0]
+        cluster_indices_core[k] = []
+        for elem in cluster_indices[k]:  
+            if elem in core_sample_indices:
+                cluster_indices_core[k].append(elem)
         cluster_sizes.append(len(cluster_indices[k]))
+        cluster_sizes_core.append(len(cluster_indices_core[k]))
         
     # Get indices of frames classified as noise:
     noise_indices = np.argwhere(labels==-1)[:,0]
@@ -303,19 +317,41 @@ def cluster_torsions_DBSCAN(
     
     # Create distance matrices within each cluster:
     torsion_distances_k = {}
-    for k in range(n_clusters):
-        torsion_distances_k[k] = np.zeros((cluster_sizes[k],cluster_sizes[k]))
-        for i in range(cluster_sizes[k]):
-            for j in range(cluster_sizes[k]):
-                torsion_distances_k[k][i,j] = torsion_distances[cluster_indices[k][i],cluster_indices[k][j]]
     
-    # Compute medoid based on similarity scores:
-    medoid_index = []
-    for k in range(n_clusters):
-        medoid_index.append(
-            np.exp(-torsion_distances_k[k] / torsion_distances_k[k].std()).sum(axis=1).argmax()
-        )
+    if core_points_only:
+        for k in range(n_clusters):
+            torsion_distances_k[k] = np.zeros((cluster_sizes_core[k],cluster_sizes_core[k]))
+            for i in range(cluster_sizes_core[k]):
+                for j in range(cluster_sizes_core[k]):
+                    torsion_distances_k[k][i,j] = torsion_distances[cluster_indices_core[k][i],cluster_indices_core[k][j]]
         
+        # Compute medoid based on similarity scores:
+        medoid_index = [] # Global index
+        intra_cluster_medoid_index = [] # Index within cluster
+        for k in range(n_clusters):
+            intra_cluster_medoid_index.append(
+                np.exp(-torsion_distances_k[k]/torsion_distances_k[k].std()).sum(axis=1).argmax()
+            )
+            # Here we need to use the global sample index to find the medoid structure:
+            medoid_index.append(cluster_indices_core[k][intra_cluster_medoid_index[k]])
+            
+    else:
+        for k in range(n_clusters):
+            torsion_distances_k[k] = np.zeros((cluster_sizes[k],cluster_sizes[k]))
+            for i in range(cluster_sizes[k]):
+                for j in range(cluster_sizes[k]):
+                    torsion_distances_k[k][i,j] = torsion_distances[cluster_indices[k][i],cluster_indices[k][j]]
+        
+        # Compute medoid based on similarity scores:
+        medoid_index = [] # Global index
+        intra_cluster_medoid_index = [] # Index within cluster
+        for k in range(n_clusters):
+            intra_cluster_medoid_index.append(
+                np.exp(-torsion_distances_k[k]/torsion_distances_k[k].std()).sum(axis=1).argmax()
+            )
+            # Here we need to use the global sample index to find the medoid structure:
+            medoid_index.append(cluster_indices[k][intra_cluster_medoid_index[k]])
+                
     medoid_xyz = np.zeros([n_clusters,traj_all.n_atoms,3])
     for k in range(n_clusters):
         medoid_xyz[k,:,:] = traj_all[medoid_index[k]].xyz[0]
@@ -333,7 +369,7 @@ def cluster_torsions_DBSCAN(
     cluster_rmsd = np.zeros(n_clusters)
     
     for k in range(n_clusters):
-        cluster_rmsd[k] = np.sqrt(((torsion_distances_k[k][medoid_index[k]]**2).sum())/len(cluster_indices[k]))
+        cluster_rmsd[k] = np.sqrt(((torsion_distances_k[k][intra_cluster_medoid_index[k]]**2).sum())/len(cluster_indices[k]))
     
     # Get silhouette scores
     try:
