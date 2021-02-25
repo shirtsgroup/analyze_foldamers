@@ -73,7 +73,6 @@ def get_cluster_medoid_positions_KMedoids(
     file_list, cgmodel, n_clusters=2,
     frame_start=0, frame_stride=1, frame_end=-1,
     output_format="pdb", output_dir="cluster_output",
-    core_points_medoid_option
     output_cluster_traj=False, plot_silhouette=True, plot_rmsd_hist=True,
     filter=False, filter_ratio=0.25, return_original_indices=False):
     """
