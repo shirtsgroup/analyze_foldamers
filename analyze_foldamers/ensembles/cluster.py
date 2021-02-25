@@ -73,6 +73,7 @@ def get_cluster_medoid_positions_KMedoids(
     file_list, cgmodel, n_clusters=2,
     frame_start=0, frame_stride=1, frame_end=-1,
     output_format="pdb", output_dir="cluster_output",
+    core_points_medoid_option
     output_cluster_traj=False, plot_silhouette=True, plot_rmsd_hist=True,
     filter=False, filter_ratio=0.25, return_original_indices=False):
     """
@@ -449,7 +450,7 @@ def get_cluster_medoid_positions_DBSCAN(
     
 def get_cluster_medoid_positions_OPTICS(
     file_list, cgmodel, min_samples=5, xi=0.05,
-    frame_start=0, frame_stride=1, frame_end=-1, output_format="pdb", output_dir="cluster_output",
+    frame_start=0, frame_stride=1, frame_end=-1, output_format="pdb", output_dir="cluster_output", output_cluster_traj = False,
     plot_silhouette=True, plot_rmsd_hist=True, filter=True, filter_ratio=0.05):
     """
     Given PDB or DCD trajectory files and coarse grained model as input, this function performs OPTICS clustering on the poses in the trajectory, and returns a list of the coordinates for the medoid pose of each cluster.
@@ -588,6 +589,9 @@ def get_cluster_medoid_positions_OPTICS(
     # Write medoids to file
     write_medoids_to_file(cgmodel, medoid_xyz, output_dir, output_format, top_from_pdb=top_from_pdb)
     medoid_positions = medoid_xyz * unit.nanometer
+
+    if output_cluster_traj:
+        write_clusters_to_file(labels, traj_all, output_dir, output_format)
     
     # Compute intra-cluster rmsd of samples to medoid based on structure rmsd
     cluster_rmsd = np.zeros(n_clusters)
