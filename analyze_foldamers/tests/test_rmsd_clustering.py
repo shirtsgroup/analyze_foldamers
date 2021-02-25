@@ -450,8 +450,7 @@ def test_clustering_dbscan_pdb_output_clusters(tmpdir):
     frame_end=-1
 
     # Run DBSCAN density-based clustering
-    medoid_positions, cluster_sizes, cluster_rmsd, n_noise, \
-    silhouette_avg, labels, original_indices = \
+    medoid_positions, cluster_sizes, cluster_rmsd, n_noise, silhouette_avg = \
         get_cluster_medoid_positions_DBSCAN(
             pdb_file_list,
             cgmodel,
