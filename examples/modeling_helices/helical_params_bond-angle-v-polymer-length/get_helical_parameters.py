@@ -103,7 +103,11 @@ for polymer_length in polymer_lengths:
             success = False
             while not success:
                 try:
-                    replica_energies, replica_positions, replica_states = run_replica_exchange(
+                    (
+                        replica_energies,
+                        replica_positions,
+                        replica_states,
+                    ) = run_replica_exchange(
                         cgmodel.topology,
                         cgmodel.system,
                         cgmodel.positions,
@@ -117,7 +121,11 @@ for polymer_length in polymer_lengths:
                 except:
                     os.remove(output_data)
         else:
-            replica_energies, replica_positions, replica_states = read_replica_exchange_data(
+            (
+                replica_energies,
+                replica_positions,
+                replica_states,
+            ) = read_replica_exchange_data(
                 system=cgmodel.system,
                 topology=cgmodel.topology,
                 temperature_list=temperature_list,
@@ -161,7 +169,9 @@ for polymer_length in polymer_lengths:
 
 file_name = str(str(top_directory) + "/heat_capacity.png")
 figure = pyplot.figure(1)
-original_temperature_list = np.array([temperature._value for temperature in temperature_list])
+original_temperature_list = np.array(
+    [temperature._value for temperature in temperature_list]
+)
 try:
     temperatures = np.array([temperature._value for temperature in new_temp_list])
 except:

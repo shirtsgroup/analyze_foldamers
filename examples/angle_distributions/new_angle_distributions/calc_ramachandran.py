@@ -11,18 +11,16 @@ from analyze_foldamers.parameters.angle_distributions import *
 
 # Load in a trajectory pdb file:
 traj_file_list = []
-nreplica=1
+nreplica = 1
 
 for rep in range(nreplica):
     traj_file_list.append(f"output/state_{rep+1}.pdb")
 
 # Load in a CGModel:
-cgmodel = pickle.load(open("stored_cgmodel.pkl","rb"))
+cgmodel = pickle.load(open("stored_cgmodel.pkl", "rb"))
 
 rama_hist, xedges, yedges = calc_ramachandran(
-    cgmodel,
-    traj_file_list,
-    plotfile="ramachandran.pdf"
+    cgmodel, traj_file_list, plotfile="ramachandran.pdf"
 )
 
 # Fit ramachandran data to 2d radially symmetric Gaussian function

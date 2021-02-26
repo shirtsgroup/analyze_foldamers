@@ -124,7 +124,9 @@ sigma_list = [
     for sigma in range(round(bond_length._value * 1.5), round(bond_length._value * 2.5))
 ]
 for sigma in sigma_list:
-    print("Performing simulations and heat capacity analysis for a coarse grained model")
+    print(
+        "Performing simulations and heat capacity analysis for a coarse grained model"
+    )
     print("with sigma values of " + str(sigma))
     sigmas = {"bb_bb_sigma": sigma, "bb_sc_sigma": sigma, "sc_sc_sigma": sigma}
     cgmodel = CGModel(
@@ -169,10 +171,17 @@ for sigma in sigma_list:
             steps_per_stage=steps_per_stage,
         )
         plot_replica_exchange_summary(
-            replica_states, temperature_list, simulation_time_step, steps_per_stage=steps_per_stage
+            replica_states,
+            temperature_list,
+            simulation_time_step,
+            steps_per_stage=steps_per_stage,
         )
     else:
-        replica_energies, replica_positions, replica_states = read_replica_exchange_data(
+        (
+            replica_energies,
+            replica_positions,
+            replica_states,
+        ) = read_replica_exchange_data(
             system=cgmodel.system,
             topology=cgmodel.topology,
             temperature_list=temperature_list,
@@ -227,13 +236,16 @@ for sigma in sigma_list:
 
 file_name = str(str(top_directory) + "/heat_capacity.png")
 figure = pyplot.figure(1)
-original_temperature_list = np.array([temperature._value for temperature in temperature_list])
+original_temperature_list = np.array(
+    [temperature._value for temperature in temperature_list]
+)
 try:
     temperatures = np.array([temperature._value for temperature in new_temp_list])
 except:
     temperatures = np.array([temperature for temperature in new_temp_list])
 legend_labels = [
-    str("$\sigma / r_{bond}$= " + str(round(i / bond_length._value, 2))) for i in sigma_range
+    str("$\sigma / r_{bond}$= " + str(round(i / bond_length._value, 2)))
+    for i in sigma_range
 ]
 
 for C_v, dC_v in zip(C_v_list, dC_v_list):

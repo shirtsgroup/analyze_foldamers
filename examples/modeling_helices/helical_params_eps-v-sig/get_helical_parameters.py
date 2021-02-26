@@ -87,7 +87,11 @@ for sigma in sigma_list:
             success = False
             while not success:
                 try:
-                    replica_energies, replica_positions, replica_states = run_replica_exchange(
+                    (
+                        replica_energies,
+                        replica_positions,
+                        replica_states,
+                    ) = run_replica_exchange(
                         cgmodel.topology,
                         cgmodel.system,
                         cgmodel.positions,
@@ -101,7 +105,11 @@ for sigma in sigma_list:
                 except:
                     os.remove(output_data)
         else:
-            replica_energies, replica_positions, replica_states = read_replica_exchange_data(
+            (
+                replica_energies,
+                replica_positions,
+                replica_states,
+            ) = read_replica_exchange_data(
                 system=cgmodel.system,
                 topology=cgmodel.topology,
                 temperature_list=temperature_list,
