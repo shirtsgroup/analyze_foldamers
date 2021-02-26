@@ -12,10 +12,10 @@ from analyze_foldamers.parameters.angle_distributions import *
 # Load in a trajectory pdb file:
 
 file_list = []
-file_list.append('output/state_1.pdb')
+file_list.append("output/state_1.pdb")
 
 # Load in a CGModel:
-cgmodel = pickle.load(open("stored_cgmodel.pkl","rb"))
+cgmodel = pickle.load(open("stored_cgmodel.pkl", "rb"))
 
 hist_data, xedges, yedges = calc_2d_distribution(
     cgmodel,
@@ -26,7 +26,7 @@ hist_data, xedges, yedges = calc_2d_distribution(
     frame_stride=1,
     frame_end=-1,
     plotfile="2d_hist.pdf",
-    xvar_name = "bb_bb_bb_sc",
-    yvar_name = "sc_bb_bb_sc",
+    xvar_name="bb_bb_bb_sc",
+    yvar_name="sc_bb_bb_sc",
     colormap="Spectral",
 )

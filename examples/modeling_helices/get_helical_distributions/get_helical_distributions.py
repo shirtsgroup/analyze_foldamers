@@ -13,7 +13,9 @@ from cg_openmm.simulation.rep_exch import *
 
 n_bins = 50
 
-native_structure_file = str(str(os.getcwd().split("examples")[0]) + "ensembles/12_1_1_0/helix.pdb")
+native_structure_file = str(
+    str(os.getcwd().split("examples")[0]) + "ensembles/12_1_1_0/helix.pdb"
+)
 
 native_structure = PDBFile(native_structure_file).getPositions()
 
@@ -145,11 +147,17 @@ radius_bins = np.array(
     ]
 )
 mpt_bins = np.array(
-    [[min_mpt + i * mpt_step_size, min_mpt + (i + 1) * mpt_step_size] for i in range(n_bins)]
+    [
+        [min_mpt + i * mpt_step_size, min_mpt + (i + 1) * mpt_step_size]
+        for i in range(n_bins)
+    ]
 )
 residual_bins = np.array(
     [
-        [min_residual + i * residual_step_size, min_residual + (i + 1) * residual_step_size]
+        [
+            min_residual + i * residual_step_size,
+            min_residual + (i + 1) * residual_step_size,
+        ]
         for i in range(n_bins)
     ]
 )
@@ -182,7 +190,9 @@ for data_index in range(len(pitch_kn)):
         for bin_index in range(len(mpt_bins)):
             bin = mpt_bins[bin_index]
             if mpt > bin[0] and mpt <= bin[1]:
-                mpt_bin_counts[data_index][bin_index] = mpt_bin_counts[data_index][bin_index] + 1
+                mpt_bin_counts[data_index][bin_index] = (
+                    mpt_bin_counts[data_index][bin_index] + 1
+                )
 
     data = residual_kn[data_index]
     for residual in data:
@@ -201,16 +211,26 @@ pitch_bins = np.array(
 )
 radius_bins = np.array(
     [
-        mean([min_radius + i * radius_step_size, min_radius + (i + 1) * radius_step_size])
+        mean(
+            [min_radius + i * radius_step_size, min_radius + (i + 1) * radius_step_size]
+        )
         for i in range(n_bins)
     ]
 )
 mpt_bins = np.array(
-    [mean([min_mpt + i * mpt_step_size, min_mpt + (i + 1) * mpt_step_size]) for i in range(n_bins)]
+    [
+        mean([min_mpt + i * mpt_step_size, min_mpt + (i + 1) * mpt_step_size])
+        for i in range(n_bins)
+    ]
 )
 residual_bins = np.array(
     [
-        mean([min_residual + i * residual_step_size, min_residual + (i + 1) * residual_step_size])
+        mean(
+            [
+                min_residual + i * residual_step_size,
+                min_residual + (i + 1) * residual_step_size,
+            ]
+        )
         for i in range(n_bins)
     ]
 )

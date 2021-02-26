@@ -13,6 +13,6 @@ from analyze_foldamers.parameters.bond_distributions import *
 traj_file = "output/state_1.pdb"
 
 # Load in a CGModel:
-cgmodel = pickle.load(open("stored_cgmodel.pkl","rb"))
+cgmodel = pickle.load(open("stored_cgmodel.pkl", "rb"))
 
 bond_hist_data = calc_bond_length_distribution(cgmodel, traj_file)

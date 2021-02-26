@@ -4,9 +4,7 @@ import numpy as np
 import pdb
 import scipy.optimize
 
-length = (
-    80  # length: can be determined from end-to-end distance, doesn't need to be parameterized.
-)
+length = 80  # length: can be determined from end-to-end distance, doesn't need to be parameterized.
 npoints = 16  # number of beads
 noise = 0.2  # noise
 points = np.arange(0, 1, 1.0 / npoints)  # parameterized path from 0 to 1
@@ -62,9 +60,21 @@ l = vecs[:, dirindices[1]]
 m = vecs[:, dirindices[0]]
 
 print("eigenvalues", vals)
-print("p2_h: {:.4f}, h: [{:.8f},{:.8f},{:.8f}]".format(p2[dirindices[2]], h[0], h[1], h[2]))
-print("p2_l: {:.4f}, l: [{:.8f},{:.8f},{:.8f}]".format(p2[dirindices[1]], l[0], l[1], l[2]))
-print("p2_m: {:.4f}, m: [{:.8f},{:.8f},{:.8f}]".format(p2[dirindices[0]], m[0], m[1], m[2]))
+print(
+    "p2_h: {:.4f}, h: [{:.8f},{:.8f},{:.8f}]".format(
+        p2[dirindices[2]], h[0], h[1], h[2]
+    )
+)
+print(
+    "p2_l: {:.4f}, l: [{:.8f},{:.8f},{:.8f}]".format(
+        p2[dirindices[1]], l[0], l[1], l[2]
+    )
+)
+print(
+    "p2_m: {:.4f}, m: [{:.8f},{:.8f},{:.8f}]".format(
+        p2[dirindices[0]], m[0], m[1], m[2]
+    )
+)
 
 # p2 seems to work in the largest h
 
@@ -120,7 +130,11 @@ for i in range(np.shape(upr)[0]):
     nm = np.cross(zaxis, ax1)  # the normal to the plane
     v = up[i]  # the vector to rotate
     # R(theta)v = nm(nm.v) + cos(theta) (nm x v) x nm + sin(-theta)(nm x v)  # from wikipedia
-    upr[i] = nm * np.dot(nm, v) + avecos * np.cross(np.cross(nm, v), nm) - avesin * np.cross(nm, v)
+    upr[i] = (
+        nm * np.dot(nm, v)
+        + avecos * np.cross(np.cross(nm, v), nm)
+        - avesin * np.cross(nm, v)
+    )
 
 # this seems frequently too high. Not sure it's great.
 print("helical alignment: ", np.mean(upr[:, 2]))
@@ -282,7 +296,8 @@ print("length/radius:", results.x[1])
 print("radius:", newradius)
 print("objective function:", obj_for_cpv(results.x, up, z))
 print(
-    "objective function with original parameters:", obj_for_cpv([0, pitch, length / radius], up, z)
+    "objective function with original parameters:",
+    obj_for_cpv([0, pitch, length / radius], up, z),
 )
 
 from mpl_toolkits.mplot3d import Axes3D

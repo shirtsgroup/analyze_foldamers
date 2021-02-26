@@ -14,21 +14,18 @@ import pickle
 
 # Load in a trajectory pdb file:
 traj_file_list = []
-nreplica=12
+nreplica = 12
 
 for i in range(nreplica):
     traj_file_list.append(f"output/state_{i+1}.dcd")
-    
+
 # Load in a CGModel:
-cgmodel = pickle.load(open("stored_cgmodel.pkl","rb"))
-    
+cgmodel = pickle.load(open("stored_cgmodel.pkl", "rb"))
+
 # Determine representative structures:
 file_list_out = get_representative_structures(
-    traj_file_list, cgmodel, output_dir="output",
-    frame_start=1000, frame_stride=100)
+    traj_file_list, cgmodel, output_dir="output", frame_start=1000, frame_stride=100
+)
 
 # Create snapshots using VMD TachyonInternal renderer
 take_snapshot(file_list_out)
-
-
-

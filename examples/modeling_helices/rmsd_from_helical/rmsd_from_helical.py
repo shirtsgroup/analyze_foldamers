@@ -17,7 +17,8 @@ from cg_openmm.simulation.rep_exch import *
 grid_size = 1
 
 native_structure_file = str(
-    str(os.getcwd().split("examples/rmsd_from_helical")[0]) + "ensembles/12_1_1_0/helix.pdb"
+    str(os.getcwd().split("examples/rmsd_from_helical")[0])
+    + "ensembles/12_1_1_0/helix.pdb"
 )
 
 native_structure = PDBFile(native_structure_file).getPositions()
@@ -48,7 +49,8 @@ T_list = []
 if not os.path.exists("F_RMSD_T.dat"):
 
     epsilon_list = [
-        unit.Quantity((0.05 + i * 0.25), unit.kilocalorie_per_mole) for i in range(grid_size)
+        unit.Quantity((0.05 + i * 0.25), unit.kilocalorie_per_mole)
+        for i in range(grid_size)
     ]
     for epsilon in epsilon_list:
         print(
@@ -71,7 +73,11 @@ if not os.path.exists("F_RMSD_T.dat"):
                 output_data=output_data,
             )
         else:
-            replica_energies, replica_positions, replica_states = read_replica_exchange_data(
+            (
+                replica_energies,
+                replica_positions,
+                replica_states,
+            ) = read_replica_exchange_data(
                 system=cgmodel.system,
                 topology=cgmodel.topology,
                 temperature_list=temperature_list,
@@ -111,7 +117,12 @@ if not os.path.exists("F_RMSD_T.dat"):
     )
     for index in range(len(T_list)):
         data_file.write(
-            str(T_list[index]) + "," + str(RMSD_list[index]) + "," + str(F_list[index]) + "\n"
+            str(T_list[index])
+            + ","
+            + str(RMSD_list[index])
+            + ","
+            + str(F_list[index])
+            + "\n"
         )
     data_file.close()
 else:
@@ -153,26 +164,26 @@ for index in range(len(z)):
     for Q_range_index in range(len(Q_ranges)):
         Q_range = Q_ranges[Q_range_index]
         if Q_range_index == 0:
-            if float(Q_list[index]) >= float(Q_range[0]) and float(Q_list[index]) <= float(
-                Q_range[1]
-            ):
+            if float(Q_list[index]) >= float(Q_range[0]) and float(
+                Q_list[index]
+            ) <= float(Q_range[1]):
                 Q_index = Q_range_index
         else:
-            if float(Q_list[index]) > float(Q_range[0]) and float(Q_list[index]) <= float(
-                Q_range[1]
-            ):
+            if float(Q_list[index]) > float(Q_range[0]) and float(
+                Q_list[index]
+            ) <= float(Q_range[1]):
                 Q_index = Q_range_index
     for T_range_index in range(len(T_ranges)):
         T_range = T_ranges[T_range_index]
         if T_range_index == 0:
-            if float(T_list[index]) >= float(T_range[0]) and float(T_list[index]) <= float(
-                T_range[1]
-            ):
+            if float(T_list[index]) >= float(T_range[0]) and float(
+                T_list[index]
+            ) <= float(T_range[1]):
                 T_index = T_range_index
         else:
-            if float(T_list[index]) > float(T_range[0]) and float(T_list[index]) <= float(
-                T_range[1]
-            ):
+            if float(T_list[index]) > float(T_range[0]) and float(
+                T_list[index]
+            ) <= float(T_range[1]):
                 T_index = T_range_index
 
     bins[T_index][Q_index].append(F_list[index])

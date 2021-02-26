@@ -58,16 +58,21 @@ bond_angle_list = []
 bin_counts_list = []
 
 bond_angle_force_constant_list = [
-    unit.Quantity((0.001 * 10 ** i), unit.kilocalorie_per_mole / unit.radian / unit.radian)
+    unit.Quantity(
+        (0.001 * 10 ** i), unit.kilocalorie_per_mole / unit.radian / unit.radian
+    )
     for i in range(grid_size)
 ]
 for constant in bond_angle_force_constant_list:
     bond_angle_force_constants = {"bb_bb_bb_angle_k": constant}
     cgmodel = CGModel(
-        positions=native_structure, bond_angle_force_constants=bond_angle_force_constants
+        positions=native_structure,
+        bond_angle_force_constants=bond_angle_force_constants,
     )
 
-    output_data = str(str(top_directory) + "/eps_" + str(round(constant._value, 3)) + ".nc")
+    output_data = str(
+        str(top_directory) + "/eps_" + str(round(constant._value, 3)) + ".nc"
+    )
     if not os.path.exists(output_data):
         replica_energies, replica_positions, replica_states = run_replica_exchange(
             cgmodel.topology,
@@ -80,7 +85,11 @@ for constant in bond_angle_force_constant_list:
             output_data=output_data,
         )
     else:
-        replica_energies, replica_positions, replica_states = read_replica_exchange_data(
+        (
+            replica_energies,
+            replica_positions,
+            replica_states,
+        ) = read_replica_exchange_data(
             system=cgmodel.system,
             topology=cgmodel.topology,
             temperature_list=temperature_list,
@@ -105,7 +114,10 @@ for constant in bond_angle_force_constant_list:
     max_bond_angle = bond_angles[np.argmax(bond_angles)]
     bond_angle_step = (max_bond_angle - min_bond_angle) / (n_bond_angle_bins + 1)
     bond_angle_ranges = [
-        [min_bond_angle + bond_angle_step * i, min_bond_angle + bond_angle_step * (i + 1)]
+        [
+            min_bond_angle + bond_angle_step * i,
+            min_bond_angle + bond_angle_step * (i + 1),
+        ]
         for i in range(n_bond_angle_bins + 1)
     ]
 
@@ -131,7 +143,14 @@ for constant in bond_angle_force_constant_list:
 x = [
     np.array(
         [
-            mean(np.array([float(bond_angle * (180.0 / 3.14)) for bond_angle in bond_angle_range]))
+            mean(
+                np.array(
+                    [
+                        float(bond_angle * (180.0 / 3.14))
+                        for bond_angle in bond_angle_range
+                    ]
+                )
+            )
             for bond_angle_range in bond_angle_ranges
         ]
     )
@@ -141,10 +160,14 @@ plot_distribution(
     x,
     bin_counts_list,
     plot_type="Angles",
-    legend=[str(round(constant._value, 3)) for constant in bond_angle_force_constant_list],
+    legend=[
+        str(round(constant._value, 3)) for constant in bond_angle_force_constant_list
+    ],
     multiple=True,
     legend_title=str(r"$k_{\theta}$"),
-    plot_title=str(r"$\theta_{BBB}$ distribution for variable $k_{\theta}$ (kCal/mol/rad^2)"),
+    plot_title=str(
+        r"$\theta_{BBB}$ distribution for variable $k_{\theta}$ (kCal/mol/rad^2)"
+    ),
 )
 
 exit()

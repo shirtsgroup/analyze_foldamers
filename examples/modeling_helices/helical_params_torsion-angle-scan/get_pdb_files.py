@@ -188,7 +188,11 @@ for bb_bb_bb_bb_equil_torsion_angle in bb_bb_bb_bb_equil_torsion_angles:
             + ".nc"
         )
         if os.path.exists(output_data):
-            replica_energies, replica_positions, replica_states = read_replica_exchange_data(
+            (
+                replica_energies,
+                replica_positions,
+                replica_states,
+            ) = read_replica_exchange_data(
                 system=cgmodel.system,
                 topology=cgmodel.topology,
                 temperature_list=temperature_list,
@@ -205,7 +209,10 @@ for bb_bb_bb_bb_equil_torsion_angle in bb_bb_bb_bb_equil_torsion_angles:
                 + ".pdb"
             )
             minimum_energy_structures = get_minimum_energy_pose(
-                cgmodel.topology, replica_energies, replica_positions, file_name=output_file
+                cgmodel.topology,
+                replica_energies,
+                replica_positions,
+                file_name=output_file,
             )
 
 

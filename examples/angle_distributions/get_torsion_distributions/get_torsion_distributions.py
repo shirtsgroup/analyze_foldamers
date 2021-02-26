@@ -71,7 +71,11 @@ for constant in torsion_force_constant_list:
             output_data=output_data,
         )
     else:
-        replica_energies, replica_positions, replica_states = read_replica_exchange_data(
+        (
+            replica_energies,
+            replica_positions,
+            replica_states,
+        ) = read_replica_exchange_data(
             system=cgmodel.system,
             topology=cgmodel.topology,
             temperature_list=temperature_list,
@@ -114,14 +118,18 @@ for constant in torsion_force_constant_list:
                     torsions[index]
                 ) <= float(torsion_range[1]):
                     torsion_bin_index = torsion_range_index
-        torsion_bin_counts[torsion_bin_index] = torsion_bin_counts[torsion_bin_index] + 1
+        torsion_bin_counts[torsion_bin_index] = (
+            torsion_bin_counts[torsion_bin_index] + 1
+        )
 
     bin_counts_list.append(torsion_bin_counts)
 
 x = [
     np.array(
         [
-            mean(np.array([float(torsion * (180.0 / 3.14)) for torsion in torsion_range]))
+            mean(
+                np.array([float(torsion * (180.0 / 3.14)) for torsion in torsion_range])
+            )
             for torsion_range in torsion_ranges
         ]
     )
@@ -134,7 +142,9 @@ plot_distribution(
     legend=[str(round(constant, 3)) for constant in torsion_force_constant_list],
     multiple=True,
     legend_title=str(r"$k_{\alpha}$"),
-    plot_title=str(r"$\alpha_{BBBB}$ distribution for variable $k_{\alpha}$ (unitless)"),
+    plot_title=str(
+        r"$\alpha_{BBBB}$ distribution for variable $k_{\alpha}$ (unitless)"
+    ),
 )
 
 exit()

@@ -8,24 +8,25 @@ import matplotlib.pyplot as plt
 from cg_openmm.utilities.random_builder import *
 from cg_openmm.utilities.iotools import write_pdbfile_without_topology
 
-kB = unit.MOLAR_GAS_CONSTANT_R # Boltzmann constant
+kB = unit.MOLAR_GAS_CONSTANT_R  # Boltzmann constant
+
 
 def get_helical_parameters(cgmodel):
     """
-        Given a coarse grained model as input, this function uses the `kHelios software package <https://pubs.acs.org/doi/10.1021/acs.jcim.6b00721>`_ to analyze the helical properties of the model.
+    Given a coarse grained model as input, this function uses the `kHelios software package <https://pubs.acs.org/doi/10.1021/acs.jcim.6b00721>`_ to analyze the helical properties of the model.
 
-        :param cgmodel: CGModel() class object
-        :type cgmodel: class
+    :param cgmodel: CGModel() class object
+    :type cgmodel: class
 
-        :returns:
-          - pitch ( float ) - The distance between monomers in adjacent turns of a helix
-          - radius ( float ) - The radius of the helix
-          - monomers_per_turn ( float ) - The number of monomrs per turn of the helix
-          - residual ( float ) - The average distance of all backbone particles from a circle projected onto the x-y plane.  Used to determine the accuracy of the helical axis, as fit to the input data.  Units are in Angstroms.
+    :returns:
+      - pitch ( float ) - The distance between monomers in adjacent turns of a helix
+      - radius ( float ) - The radius of the helix
+      - monomers_per_turn ( float ) - The number of monomrs per turn of the helix
+      - residual ( float ) - The average distance of all backbone particles from a circle projected onto the x-y plane.  Used to determine the accuracy of the helical axis, as fit to the input data.  Units are in Angstroms.
 
-        .. warning:: This function requires a pre-installed version of `kHelios <https://pubs.acs.org/doi/10.1021/acs.jcim.6b00721>`_ .  Because kHelios is formatted to accept input job scripts, this function writes and executes a job script for kHelios.  In order to function properly, the user must redefine the 'helios_path' variable for their system.
+    .. warning:: This function requires a pre-installed version of `kHelios <https://pubs.acs.org/doi/10.1021/acs.jcim.6b00721>`_ .  Because kHelios is formatted to accept input job scripts, this function writes and executes a job script for kHelios.  In order to function properly, the user must redefine the 'helios_path' variable for their system.
 
-        """
+    """
     helios_path = str("../../foldamers/foldamers/parameters/helios.o")
     cgmodel = orient_along_z_axis(cgmodel)
     write_pdbfile_without_topology(cgmodel, "temp_pitch.pdb")
@@ -78,17 +79,17 @@ def get_helical_parameters(cgmodel):
 
 def orient_along_z_axis(cgmodel, plot_projections=False):
     """
-        Given a coarse grained model as input, this function orients the model along the z-axis.
+    Given a coarse grained model as input, this function orients the model along the z-axis.
 
-        :param cgmodel: CGModel() class object
-        :type cgmodel: class
+    :param cgmodel: CGModel() class object
+    :type cgmodel: class
 
-        :param plot_projections: Variable indicating whether or not to plot intermediate projections/operations during identification of a helical axis.
+    :param plot_projections: Variable indicating whether or not to plot intermediate projections/operations during identification of a helical axis.
 
-        :returns:
-           - cgmodel ( class ) - CGModel() class object, with positions oriented so that the helical axis is along the z-axis
+    :returns:
+       - cgmodel ( class ) - CGModel() class object, with positions oriented so that the helical axis is along the z-axis
 
-        """
+    """
     positions = np.array(
         [
             [float(i.in_units_of(unit.angstrom)._value) for i in position]
@@ -209,8 +210,8 @@ def orient_along_z_axis(cgmodel, plot_projections=False):
 
 def show_helical_fit(cgmodel):
     """
-        Given a coarse grained model containing positions, this function performs a helical fit for the backbone particles with `kHelios <https://pubs.acs.org/doi/10.1021/acs.jcim.6b00721>`_ , and uses 'matplotlib' to display attributes of the helical fit.
-        """
+    Given a coarse grained model containing positions, this function performs a helical fit for the backbone particles with `kHelios <https://pubs.acs.org/doi/10.1021/acs.jcim.6b00721>`_ , and uses 'matplotlib' to display attributes of the helical fit.
+    """
     # 1) Get the backbone particle positions
     positions = np.array(
         [
@@ -249,16 +250,16 @@ def show_helical_fit(cgmodel):
 
 def calculate_p2(cgmodel):
     """
-        Given a coarse grained model containing positions, this function returns the `'P2' <http://cmt.dur.ac.uk/sjc/thesis_dlc/node19.html>`_ orientational ordering parameter value for the current pose.
+    Given a coarse grained model containing positions, this function returns the `'P2' <http://cmt.dur.ac.uk/sjc/thesis_dlc/node19.html>`_ orientational ordering parameter value for the current pose.
 
-        .. warning:: By default, 'P2' is evaluated using the positions for only the backbone particles.
+    .. warning:: By default, 'P2' is evaluated using the positions for only the backbone particles.
 
-        :param cgmodel: CGModel() class object
-        :type cgmodel: class
+    :param cgmodel: CGModel() class object
+    :type cgmodel: class
 
-        :returns:
-         - p2 ( float ) - The value for the 'P2' orientational ordering parameter.
-        """
+    :returns:
+     - p2 ( float ) - The value for the 'P2' orientational ordering parameter.
+    """
     positions = np.array(
         [
             [float(i.in_units_of(unit.angstrom)._value) for i in position]
@@ -335,7 +336,9 @@ def calculate_p2(cgmodel):
         v = up[i]  # the vector to rotate
         # R(theta)v = nm(nm.v) + cos(theta) (nm x v) x nm + sin(-theta)(nm x v)  # from wikipedia
         upr[i] = (
-            nm * np.dot(nm, v) + avecos * np.cross(np.cross(nm, v), nm) - avesin * np.cross(nm, v)
+            nm * np.dot(nm, v)
+            + avecos * np.cross(np.cross(nm, v), nm)
+            - avesin * np.cross(nm, v)
         )
 
     # cmid = 0.5*(cp[0:-1,:] + cp[1:,:])
@@ -365,8 +368,7 @@ def calculate_p2(cgmodel):
 
 
 def get_helical_data(cgmodel):
-    """
-        """
+    """"""
     cgmodel = orient_along_z_axis(cgmodel)
 
     # Get the new backbone particle positions
@@ -400,7 +402,9 @@ def get_helical_data(cgmodel):
             rotations = rotations + rotation
 
     radius = mean(
-        np.array([float(dist.in_units_of(unit.angstrom)._value) for dist in axis_distances])
+        np.array(
+            [float(dist.in_units_of(unit.angstrom)._value) for dist in axis_distances]
+        )
     )
     particles_per_turn = float(cgmodel.polymer_length / (rotations / 6.28))
 
@@ -414,7 +418,9 @@ def get_helical_data(cgmodel):
     for position in cgmodel.positions:
         position[0]._value = position[0]._value + shift
         if abs(position[0]._value - cgmodel.positions[0][0]._value) > 0:
-            axis_deltas.append(float(position[0]._value - cgmodel.positions[0][0]._value))
+            axis_deltas.append(
+                float(position[0]._value - cgmodel.positions[0][0]._value)
+            )
     average_delta = mean(axis_deltas)
     pitch = average_delta * particles_per_turn
 
