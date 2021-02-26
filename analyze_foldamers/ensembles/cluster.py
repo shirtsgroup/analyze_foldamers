@@ -74,7 +74,7 @@ def get_cluster_medoid_positions_KMedoids(
     frame_start=0, frame_stride=1, frame_end=-1,
     output_format="pdb", output_dir="cluster_output",
     output_cluster_traj=False, plot_silhouette=True, plot_rmsd_hist=True,
-    filter=False, filter_ratio=0.25, return_original_indices=False):
+    filter=False, filter_ratio=0.25):
     """
     Given PDB or DCD trajectory files and coarse grained model as input, this function performs K-medoids clustering on the poses in trajectory, and returns a list of the coordinates for the medoid pose of each cluster.
 
@@ -117,14 +117,13 @@ def get_cluster_medoid_positions_KMedoids(
     :param filter_ratio: fraction of data points which pass through the neighborhood radius filter (default=0.05)
     :type filter_ratio: float
 
-    :param return_original_indices: option to return the original indicies and labels of clustered structures
-    :type return_original_indices: boolean
-
     :returns:
        - medoid_positions ( np.array( float * unit.angstrom ( n_clusters x num_particles x 3 ) ) ) - A 3D numpy array of poses corresponding to the medoids of all trajectory clusters.
        - cluster_sizes ( List ( int ) ) - A list of number of members in each cluster 
        - cluster_rmsd( np.array ( float ) ) - A 1D numpy array of rmsd (in cluster distance space) of samples to cluster centers
        - silhouette_avg - ( float ) - average silhouette score across all clusters
+       - labels ( np.array ) - labels of frames taken from the original trajectory
+       - original_indices ( np.array ) - original indices of labels in the overall trajectory fed into this function
     """
     
     if not os.path.exists(output_dir):
@@ -134,19 +133,13 @@ def get_cluster_medoid_positions_KMedoids(
     if cgmodel is None:
         top_from_pdb = file_list[0]
     
-    if return_original_indices:
-        distances, traj_all, original_indices = get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end, return_original_indices=True)
-    distances, traj_all = get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end)
+    distances, traj_all, original_indices = get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end, return_original_indices=True)
     
     if filter:
         # Filter distances:
-        if return_original_indices:
-            distances, dense_indices, filter_ratio_actual, original_indices = \
-                filter_distances(distances, filter_ratio=filter_ratio, return_original_indices = True, original_indices = original_indices)
-        else:
-            distances, dense_indices, filter_ratio_actual = \
-                filter_distances(distances, filter_ratio=filter_ratio)
-    
+        distances, dense_indices, filter_ratio_actual, original_indices = \
+            filter_distances(distances, filter_ratio=filter_ratio, return_original_indices = True, original_indices = original_indices)
+
     if plot_rmsd_hist:
         distances_row = np.reshape(distances, (distances.shape[0]*distances.shape[1],1))
         
@@ -216,15 +209,7 @@ def get_cluster_medoid_positions_KMedoids(
             n_clusters, cluster_rmsd, cluster_sizes, plotfile
             )        
     
-    if return_original_indices:
-        return medoid_positions, cluster_sizes, cluster_rmsd, silhouette_avg,  labels, original_indices
-
-    return medoid_positions, cluster_sizes, cluster_rmsd, silhouette_avg
-
-    if return_original_indices:
-        return medoid_positions, cluster_sizes, cluster_rmsd, labels, original_indices
-
-    return medoid_positions, cluster_sizes, cluster_rmsd
+    return medoid_positions, cluster_sizes, cluster_rmsd, silhouette_avg, labels, original_indices
 
     
 def get_cluster_medoid_positions_DBSCAN(
@@ -232,7 +217,7 @@ def get_cluster_medoid_positions_DBSCAN(
     frame_start=0, frame_stride=1, frame_end=-1, output_format="pdb",
     output_dir="cluster_output", output_cluster_traj = False, plot_silhouette=True,
     plot_rmsd_hist=True, filter=True, filter_ratio=0.25,
-    core_points_only=True, return_original_indices=False):
+    core_points_only=True):
     """
     Given PDB or DCD trajectory files and coarse grained model as input, this function performs DBSCAN clustering on the poses in the trajectory, and returns a list of the coordinates for the medoid pose of each cluster.
 
@@ -274,17 +259,15 @@ def get_cluster_medoid_positions_DBSCAN(
     
     :param core_points_only: use only core points to calculate medoid structures (default=True)
     :type core_points_only: boolean
-    
-    :param return_original_indices: option to return the original indicies and labels of clustered structures
-    :type return_original_indices: boolean
 
     :returns:
        - medoid_positions ( np.array( float * unit.angstrom ( n_clusters x num_particles x 3 ) ) ) - A 3D numpy array of poses corresponding to the medoids of all trajectory clusters.
        - cluster_sizes ( List ( int ) ) - A list of number of members in each cluster 
        - cluster_rmsd( np.array ( float ) ) - A 1D numpy array of rmsd (in cluster distance space) of samples to cluster centers
        - n_noise ( int ) - number of points classified as noise
-       - labels ( np.array ) - labels of 
        - silhouette_avg - ( float ) - average silhouette score across all clusters 
+       - labels ( np.array ) - labels of frames taken from the original trajectory
+       - original_indices ( np.array ) - original indices of labels in the overall trajectory fed into this function
     """    
     
     if not os.path.exists(output_dir):
@@ -294,21 +277,17 @@ def get_cluster_medoid_positions_DBSCAN(
     if cgmodel is None:
         top_from_pdb = file_list[0]
 
-    if return_original_indices:
-        distances, traj_all, original_indices = get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end, return_original_indices=True)
-    else:
-        distances, traj_all = get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end)
+
+    distances, traj_all, original_indices = get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end, return_original_indices=True)
+
     
     
     if filter:
         # Filter distances:
         
-        if return_original_indices:
-            distances, dense_indices, filter_ratio_actual, original_indices = \
-                filter_distances(distances, filter_ratio=filter_ratio, return_original_indices = True, original_indices = original_indices)
-        else:
-            distances, dense_indices, filter_ratio_actual = \
-                filter_distances(distances, filter_ratio=filter_ratio)
+
+        distances, dense_indices, filter_ratio_actual, original_indices = \
+            filter_distances(distances, filter_ratio=filter_ratio, return_original_indices = True, original_indices = original_indices)
         
         traj_all = traj_all[dense_indices]
 
@@ -441,10 +420,8 @@ def get_cluster_medoid_positions_DBSCAN(
         print("There are either no clusters, or no noise points identified. Try adjusting DBSCAN min_samples, eps parameters.")
         silhouette_avg = None
 
-    if return_original_indices:
-            return medoid_positions, cluster_sizes, cluster_rmsd, n_noise, silhouette_avg, labels, original_indices
+    return medoid_positions, cluster_sizes, cluster_rmsd, n_noise, silhouette_avg, labels, original_indices
 
-    return medoid_positions, cluster_sizes, cluster_rmsd, n_noise, silhouette_avg  
     
     
 def get_cluster_medoid_positions_OPTICS(
@@ -505,12 +482,12 @@ def get_cluster_medoid_positions_OPTICS(
     if cgmodel is None:
         top_from_pdb = file_list[0]
     
-    distances, traj_all = get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end)
+    distances, traj_all, original_indices = get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end, return_original_indices=True)
     
     if filter:
         # Filter distances:
-        distances, dense_indices, filter_ratio_actual = \
-            filter_distances(distances, filter_ratio=filter_ratio)
+        distances, dense_indices, filter_ratio_actual, original_indices = \
+            filter_distances(distances, filter_ratio=filter_ratio, return_original_indices = True, original_indices = original_indices)
         
         traj_all = traj_all[dense_indices]
 
@@ -615,7 +592,7 @@ def get_cluster_medoid_positions_OPTICS(
         print("There are either no clusters, or no noise points identified. Try adjusting OPTICS min_samples, xi parameters")
         silhouette_avg = None
         
-    return medoid_positions, cluster_sizes, cluster_rmsd, n_noise, silhouette_avg
+    return medoid_positions, cluster_sizes, cluster_rmsd, n_noise, silhouette_avg, labels, original_indices
     
     
 def filter_distances(distances, filter_ratio=0.05, return_original_indices = False, original_indices = None):
@@ -843,11 +820,11 @@ def write_clusters_to_file(labels, traj_all, output_dir, output_format):
     clusters = np.unique(labels)
 
     for k in clusters:
-        cluster_indicies  = np.argwhere(labels == k)
+        cluster_indices  = np.argwhere(labels == k)
         if k == -1:
             k = "noise"
         file_name = str(f"{output_dir}/cluster_{k}.{output_format}")
-        cluster_traj = traj_all.slice(cluster_indicies.reshape(-1))
+        cluster_traj = traj_all.slice(cluster_indices.reshape(-1))
         cluster_traj.save(file_name)
 
 
