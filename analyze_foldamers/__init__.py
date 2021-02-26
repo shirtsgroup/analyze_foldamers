@@ -7,6 +7,7 @@ Tools for structural analysis of coarse-grained foldamer simulations
 from .ensembles import *
 from .parameters import *
 from .utilities import *
+from .energy import *
 
 # Handle versioneer
 from ._version import get_versions
