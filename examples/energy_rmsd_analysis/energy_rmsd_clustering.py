@@ -245,9 +245,6 @@ def main():
                 cluster_energies = all_energies[original_indices[cluster_indices]]
                 energy_dists.append(cluster_energies)
 
-            #
-            # plt.errorbar(cluster_rmsd[i], avg_energy, c = color, yerr=std_energy, fmt='o', markersize=10, capsize=5)
-            print("size energy_dists:", len(energy_dists), "size cluster_rmsd", len(cluster_rmsd))
             parts = ax.violinplot(
                 energy_dists,
                 positions=cluster_rmsd,
