@@ -11,7 +11,7 @@ import matplotlib.cm as cm
 from cg_openmm.cg_model.cgmodel import CGModel
 from cg_openmm.utilities.iotools import write_pdbfile_without_topology
 from sklearn_extra.cluster import KMedoids
-from scipy.optimize import minimize    
+from scipy.optimize import minimize, differential_evolution 
     
 def get_representative_structures(
     file_list, cgmodel,
@@ -595,7 +595,7 @@ def get_cluster_medoid_positions_OPTICS(
     return medoid_positions, cluster_sizes, cluster_rmsd, n_noise, silhouette_avg, labels, original_indices
     
     
-def filter_distances(distances, filter_ratio=0.05, return_original_indices = False, original_indices = None):
+def filter_distances(distances, filter_ratio=0.05, return_original_indices=False, original_indices=None):
     """
     Function for filtering out data points with few neighbors within a cutoff radius
     
@@ -631,9 +631,11 @@ def filter_distances(distances, filter_ratio=0.05, return_original_indices = Fal
     
     # Optimize cutoff_radius, density_cutoff parameters to get desired filter ratio
     # A value of 0.05 is reasonable for rmsd distances, 75 is reasonable for torsion n-dimensional euclidean distances
-    x0 = [np.mean(distances)/2, 5]
     
-    results = minimize(get_filter_ratio, x0, method='Nelder-Mead')
+    # Set optimization bounds [radius, n_neighbors]:
+    bounds = [(0,np.max(distances)),(1,50)]
+
+    results = differential_evolution(get_filter_ratio, bounds, polish=True)
     
     cutoff_radius = results.x[0]
     density_cutoff = results.x[1]
@@ -657,7 +659,7 @@ def filter_distances(distances, filter_ratio=0.05, return_original_indices = Fal
     
     filter_ratio_actual = len(neighbors_dense)/len(neighbors)
     
-    print(f"filtered {(1-filter_ratio_actual)*100} % of data using:")
+    print(f"filtered {(1-filter_ratio_actual)*100:.4f} % of data using:")
     print(f"cutoff radius = {cutoff_radius}")
     print(f"number neighbors cutoff: {density_cutoff}")
     
