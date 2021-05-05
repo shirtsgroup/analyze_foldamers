@@ -85,6 +85,15 @@ def get_default_parameters():
     }
     return default_params
 
+def compute_2_population_z_score(X1, X2):
+    mu_1 = np.mean(X1)
+    mu_2 = np.mean(X2)
+    sigma_1 = np.std(X1)
+    sigma_2 = np.std(X2)
+
+    z_score = (mu_1 - mu_2) / np.sqrt(np.square(sigma_1)/len(X1) + np.square(sigma_2)/len(X2)) 
+    return z_score
+
 
 def main():
     args = parse_args()
@@ -204,13 +213,14 @@ def main():
         if len(cluster_sizes) > 0:
             # Output cluster energy distributions
             clusters = list(np.unique(labels))
-
+            all_cluster_energies = []
             if -1 in clusters:
                 clusters.remove(-1)
             for i in clusters:
                 plt.figure(figsize=[5, 5], dpi=100)
                 cluster_indices = np.where(labels == i)[0]
                 cluster_energies = all_energies[original_indices[cluster_indices]]
+                all_cluster_energies.append(cluster_energies)
                 mean_energy = np.mean(cluster_energies)
                 std_energy = np.std(cluster_energies)
                 color = cm.nipy_spectral(float(i) / len(clusters))
@@ -329,6 +339,18 @@ def main():
             plt.close("all")
 
             print(["Medoid " + str(i) for i in clusters])
+
+            # Energy statistical test 
+            # Z test for comparing two population means
+
+            z_score_matrix = np.zeros((len(clusters), len(clusters)))
+            for i in clusters:
+                for j in clusters:
+                    if i != j:
+                        z_score_matrix[i,j] = compute_2_population_z_score(all_cluster_energies[i], all_cluster_energies[j])
+
+            np.savetxt(os.path.join(sub_dir,"energy_z_scores.txt"), z_score_matrix, delimiter=',')
+            print(z_score_matrix)
 
         else:
             print("No cluster Identified")
