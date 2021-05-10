@@ -5,21 +5,21 @@ channels:
   - defaults
 dependencies:
   - matplotlib-base
-  - mdtraj=1.9.4
-  - mpi4py=3.0.3
-  - numpy=1.18.5
-  - openmm=7.4.2
-  - openmmtools=0.19.0
+  - mdtraj
+  - mpi4py
+  - numpy
+  - openmm
+  - openmmtools
   - pickleshare
   - pip
-  - pymbar=3.0.5
+  - pymbar
   - pytest
   - pytest-cov
   - python
   - pyyaml
-  - scikit-learn=0.23.1
+  - scikit-learn
   - scikit-learn-extra
-  - scipy=1.4.1
+  - scipy
   - yaml
 
   # Pip-only installs
