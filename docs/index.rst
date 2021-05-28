@@ -3,14 +3,24 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to analyze_foldamers's documentation!
+analyze_foldamers
 =========================================================
 
+``analyze_foldamers`` is a Python package for structural analysis of coarse-grained
+oligomer molecular simulations.
+
+ - Identify native structures using RMSD or torsion-based clustering of trajectories
+ - Generate histograms of all bonded parameters (bonds, angles, torsions)
+ - Generate 2D histograms of any combination of bonded observables
+ - Determine helical parameters for folded oligomer structures
+ - Tools for automated rendering of molecular snapshots with VMD
+ 
 .. toctree::
    :maxdepth: 2
-   :caption: Introduction:
+   :caption: Getting started
 
-   getting_started
+   installation
+   examples
    
 .. toctree::
    :maxdepth: 2
@@ -32,9 +42,9 @@ Welcome to analyze_foldamers's documentation!
    
 .. toctree::
    :maxdepth: 2
-   :caption: API documentation
+   :caption: Visualization
    
-   api
+   visualization
 
 Indices and tables
 ==================

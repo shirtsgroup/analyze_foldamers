@@ -6,6 +6,9 @@ def take_snapshot(file_list):
     For each file in file_list (pdb), render molecular snapshot in VMD. All files are loaded
     into VMD at once, and each frame is rendered as a bitmap file.
     
+    :param file_list: list of pdb files to render
+    :type file_list: list
+    
     """
     
     if type(file_list) == str:
