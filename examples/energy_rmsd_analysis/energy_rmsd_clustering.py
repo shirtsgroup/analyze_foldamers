@@ -77,7 +77,6 @@ def get_default_parameters():
         "frame_stride": 1,
         "frame_end": -1,
         "output_format": "pdb",
-        "cgmodel": None,
         "plot_silhouette": True,
         "filter": True,
         "filter_ratio": 0.5,
@@ -85,6 +84,15 @@ def get_default_parameters():
         "core_points_only": False,
     }
     return default_params
+
+def compute_2_population_z_score(X1, X2):
+    mu_1 = np.mean(X1)
+    mu_2 = np.mean(X2)
+    sigma_1 = np.std(X1)
+    sigma_2 = np.std(X2)
+
+    z_score = (mu_1 - mu_2) / np.sqrt(np.square(sigma_1)/len(X1) + np.square(sigma_2)/len(X2)) 
+    return z_score
 
 
 def main():
@@ -115,12 +123,13 @@ def main():
             )
             print("Remaining input key-value pairs are:", *args.cluster_parameters)
 
-        param_dict = {}
         for key, value in zip(
             args.cluster_parameters[::2], args.cluster_parameters[1::2]
         ):
             if key in param_dict.keys():
-                param_dict[key] = value
+                param_dict[key] = type(param_dict[key])(value)
+        print("Using non-default parameters for clutsering:")
+        print(param_dict)
 
     # Single parameter option
     if args.single is not None:
@@ -196,29 +205,22 @@ def main():
             original_indices,
         ) = analyze_foldamers.cluster.get_cluster_medoid_positions_DBSCAN(
             traj_file_list,
-            eps=0.15,
-            min_samples=30,
-            frame_start=700,
-            frame_stride=1,
+            None,
             output_dir=os.path.join(sub_dir, "cluster_output"),
-            cgmodel=None,
-            plot_silhouette=True,
-            filter=True,
-            filter_ratio=0.5,
-            output_cluster_traj=True,
+            **param_dict
         )
 
         if len(cluster_sizes) > 0:
             # Output cluster energy distributions
-
             clusters = list(np.unique(labels))
-
+            all_cluster_energies = []
             if -1 in clusters:
                 clusters.remove(-1)
             for i in clusters:
                 plt.figure(figsize=[5, 5], dpi=100)
                 cluster_indices = np.where(labels == i)[0]
                 cluster_energies = all_energies[original_indices[cluster_indices]]
+                all_cluster_energies.append(cluster_energies)
                 mean_energy = np.mean(cluster_energies)
                 std_energy = np.std(cluster_energies)
                 color = cm.nipy_spectral(float(i) / len(clusters))
@@ -236,6 +238,7 @@ def main():
                         sub_dir, "cluster_energy_dist_cluster_" + str(i) + ".jpg"
                     ), bbox_inches="tight"
                 )
+                plt.close("all")
 
             fig = plt.figure(figsize=[10, 10], dpi=500)
             ax = fig.add_axes([0, 0, 1, 1])
@@ -297,6 +300,57 @@ def main():
 
             plt.close("all")
 
+            # Distance matrix of each medoid structure to one another
+
+            medoid_rmsd_matrix = 1
+
+            cluster_output_files = os.listdir(os.path.join(sub_dir, "cluster_output"))
+            cluster_output_files.sort()
+            medoid_traj = None
+            for medoid_file in cluster_output_files:
+                if "medoid" in medoid_file:
+                    if medoid_traj is None:
+                        medoid_traj = md.load(os.path.join(sub_dir, "cluster_output", medoid_file))
+                    else:
+                        medoid_traj = medoid_traj.join(md.load(os.path.join(sub_dir, "cluster_output", medoid_file)))
+
+            medoid_traj.superpose(medoid_traj)
+            medoid_rmsd_matrix = np.zeros((medoid_traj.n_frames, medoid_traj.n_frames))
+
+            for i in range(medoid_traj.n_frames):
+                medoid_rmsd_matrix[i, :] = md.rmsd(medoid_traj, medoid_traj[i])
+
+            plt.figure(figsize = [10,10])
+            plt.matshow(medoid_rmsd_matrix, cmap = "viridis")
+            ax = plt.gca()
+
+            labels = ["Medoid " + str(i) for i in clusters]
+            labels.insert(0, "")
+            ax.set_xticklabels(labels)
+            ax.set_yticklabels(labels)
+
+            # for i in range(len(clusters)):
+            #    for j in range(len(clusters)):
+            #        plt.text(j, i, round(medoid_rmsd_matrix[i, j], 3), horizontalalignment='center', verticalalignment='center')
+
+
+            plt.savefig(os.path.join(sub_dir, "intermedoid_rmsd_matrix.pdf"), bbox_inches="tight")
+            plt.savefig(os.path.join(sub_dir, "intermedoid_rmsd_matrix.pdf"), bbox_inches="tight")
+            plt.close("all")
+
+            print(["Medoid " + str(i) for i in clusters])
+
+            # Energy statistical test 
+            # Z test for comparing two population means
+
+            z_score_matrix = np.zeros((len(clusters), len(clusters)))
+            for i in clusters:
+                for j in clusters:
+                    if i != j:
+                        z_score_matrix[i,j] = compute_2_population_z_score(all_cluster_energies[i], all_cluster_energies[j])
+
+            np.savetxt(os.path.join(sub_dir,"energy_z_scores.txt"), z_score_matrix, delimiter=',')
+            print(z_score_matrix)
 
         else:
             print("No cluster Identified")
