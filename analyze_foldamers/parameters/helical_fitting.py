@@ -1,6 +1,7 @@
 import os, subprocess
 import numpy as np
 import simtk.unit as unit
+import mdtraj as md
 from statistics import mean
 from scipy.stats import linregress
 from scipy import spatial
@@ -10,25 +11,68 @@ from cg_openmm.utilities.iotools import write_pdbfile_without_topology
 
 kB = unit.MOLAR_GAS_CONSTANT_R # Boltzmann constant
 
-def get_helical_parameters(cgmodel):
+def get_helical_parameters(cgmodel,structure_file=None,
+    helios_path="../../../../kHelios/bin/helios.o",bb_name='bb1', bb_type_name='bb',
+    phi_beg=0, phi_end=180, theta_beg=0, theta_end=180, ngrid=360):
     """
-        Given a coarse grained model as input, this function uses the `kHelios software package <https://pubs.acs.org/doi/10.1021/acs.jcim.6b00721>`_ to analyze the helical properties of the model.
+    Given a coarse grained model as input, this function uses the `kHelios software package <https://pubs.acs.org/doi/10.1021/acs.jcim.6b00721>`_ to analyze the helical properties of the model.
 
-        :param cgmodel: CGModel() class object
-        :type cgmodel: class
+    :param cgmodel: CGModel() class object
+    :type cgmodel: class
+    
+    :param structure_file: If provided, use the coordinates in this file instead of those saved in the cgmodel (pdb or dcd)
+    :type structure_file: str
+    
+    :param helios_path: Path to the helios.o file (this requires an installed version of kHelios)
+    :type helio_path: str
+    
+    :param bb_name: Backbone particle name defined in the cgmodel
+    :type bb_name: str
+    
+    :param bb_type_name: Backbone particle type name defined in the cgmodel
+    :type bb_type_name: str
+    
+    :param phi_beg: phi angle lower bound for scan
+    :type phi_beg: float
+    
+    :param phi_end: phi angle upper bound for scan
+    :type phi_end: float
+    
+    :param theta_beg: theta angle lower bound for scan
+    :type theta_beg: float
+    
+    :param theta_end: theta angle upper bound for scan
+    :type theta_end: float 
+    
+    :param ngrid: number of grid points
+    :type ngrid: int
 
-        :returns:
-          - pitch ( float ) - The distance between monomers in adjacent turns of a helix
-          - radius ( float ) - The radius of the helix
-          - monomers_per_turn ( float ) - The number of monomrs per turn of the helix
-          - residual ( float ) - The average distance of all backbone particles from a circle projected onto the x-y plane.  Used to determine the accuracy of the helical axis, as fit to the input data.  Units are in Angstroms.
+    :returns:
+      - pitch ( float ) - The distance between monomers in adjacent turns of a helix
+      - radius ( float ) - The radius of the helix
+      - monomers_per_turn ( float ) - The number of monomrs per turn of the helix
+      - residual ( float ) - The average distance of all backbone particles from a circle projected onto the x-y plane.  Used to determine the accuracy of the helical axis, as fit to the input data.  Units are in Angstroms.
 
-        .. warning:: This function requires a pre-installed version of `kHelios <https://pubs.acs.org/doi/10.1021/acs.jcim.6b00721>`_ .  Because kHelios is formatted to accept input job scripts, this function writes and executes a job script for kHelios.  In order to function properly, the user must redefine the 'helios_path' variable for their system.
+    .. warning:: This function requires a pre-installed version of `kHelios <https://pubs.acs.org/doi/10.1021/acs.jcim.6b00721>`_ .  Because kHelios is formatted to accept input job scripts, this function writes and executes a job script for kHelios.  In order to function properly, the user must redefine the 'helios_path' variable for their system.
 
-        """
-    helios_path = str("../../foldamers/foldamers/parameters/helios.o")
+    """
+        
+    if structure_file is not None:
+        # Use the coordinates in structure_file
+        if structure_file[-3:] == 'dcd':
+            traj = md.load(structure_file,top=md.Topology.from_openmm(cgmodel.topology))
+        else:
+            traj = md.load(structure_file)
+            
+        cgmodel.positions = traj.xyz[0]*unit.nanometer
+
+    # Orient positions in cgmodel along z axis:
     cgmodel = orient_along_z_axis(cgmodel)
+    
+    # Save new positions to file:
     write_pdbfile_without_topology(cgmodel, "temp_pitch.pdb")
+    
+    # Set up kHelios input script:
     kHelix_run_file = "run_kHelix.sh"
     file = open(kHelix_run_file, "w")
     file.write("#!/bin/bash\n")
@@ -37,18 +81,17 @@ def get_helical_parameters(cgmodel):
     file.write("inputhelix $1\n")
     file.write("helixout_name kHelix.out\n")
     file.write("coord_type 1\n")
-    file.write("num_grid 20\n")
-    file.write("natoms " + str(round(cgmodel.num_beads / 2)) + "\n")
+    file.write(f"num_grid {ngrid}\n")
+    file.write(f"natoms {round(cgmodel.num_beads / 2)}\n")
     file.write("nframes 1\n")
-    file.write("grid_phi_beg 0\n")
-    file.write("grid_phi_end 20\n")
-    file.write("grid_theta_beg 0\n")
-    file.write("grid_theta_end 20\n")
-    file.write("helix_atom_names X1\n")
+    file.write(f"grid_phi_beg {phi_beg}\n")
+    file.write(f"grid_phi_end {phi_end}\n")
+    file.write(f"grid_theta_beg {theta_beg}\n")
+    file.write(f"grid_theta_end {theta_end}\n")
+    file.write(f"helix_atom_names {bb_name}\n")
     file.write("print_to_plot 1\n")
     file.write("EOF\n")
-    file.write(str(helios_path) + " input\n")
-    # file.write('done\n')
+    file.write(f"{helios_path} input\n")
     file.close()
     subprocess.run(["chmod", "+x", "run_kHelix.sh"])
     subprocess.run(
@@ -64,6 +107,7 @@ def get_helical_parameters(cgmodel):
     output = file.readlines()
     line_index = 1
     for line in output:
+        # We should update file parsing to make sure this is always true
         if line_index == 43:
             residual = line.split()[2]
             radius = line.split()[3]
