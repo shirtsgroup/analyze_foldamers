@@ -58,10 +58,10 @@ def fit_helix_to_points(data_points, x0):
         error = 0
         for i in range(data_points.shape[0]):
             error += np.square(data_points[i,0] - radius*np.cos(w*data_points[i,2] + phi)) + np.square(data_points[i,1] - radius*np.sin(w*data_points[i,2] + phi))
-        
+        print(error)
         return error
 
-    helix_results = minimize(helix_error, np.array([1,1,1]), args=(data_points), method="L-BFGS-B")
+    helix_results = minimize(helix_error, np.array([2,1,1]), args=(data_points), method="L-BFGS-B")
     print(helix_results)
 
     return(*helix_results.x[:3], np.linalg.inv(rotation_matrix), center, axis_norm)
@@ -75,8 +75,8 @@ def generate_test_helix(radius, pitch, res_per_turn, noise, n_points, phase_shif
 
     z_height = (n_points-1)*pitch/res_per_turn
     z_line = np.linspace(0, z_height, n_points).reshape(n_points, 1)
-    x_line = radius*np.sin(2*np.pi*z_line/pitch + phase_shift)
-    y_line = radius*np.cos(2*np.pi*z_line/pitch + phase_shift)
+    x_line = radius*np.cos(2*np.pi*z_line/pitch + phase_shift)
+    y_line = radius*np.sin(2*np.pi*z_line/pitch + phase_shift)
 
     z_data = z_line + np.random.normal(scale=noise, size = z_line.shape)
     x_data = x_line + np.random.normal(scale=noise, size = z_line.shape)
@@ -97,7 +97,7 @@ def generate_test_helix(radius, pitch, res_per_turn, noise, n_points, phase_shif
 
 def main():
     # Generate sample helix and center at origin
-    test_helix = generate_test_helix(4, 4, 4.5, 0.05, 15, phase_shift = 0, rotation=[0,0,0.3])
+    test_helix = generate_test_helix(4, 4, 4.5, 0.05, 15, phase_shift = 0, rotation=[0,0,0])
     
     # Plot helix points
     fig = plt.figure()
