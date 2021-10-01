@@ -35,7 +35,7 @@ def fit_helix_to_points(data_points, x0):
     axis = cyl_results.x[4:]
     axis_norm = axis/np.sqrt(np.dot(axis, axis))
 
-    # Fit Helix rotate coordinate system
+    # Rotate coordinate system to match tilt of helix
 
     centered = data_points - center
 
@@ -46,6 +46,8 @@ def fit_helix_to_points(data_points, x0):
     rotation_matrix = np.array([ortho_norm, np.cross(axis_norm, ortho_norm), axis_norm])
 
     transformed_points = np.dot(data_points, rotation_matrix.transpose())
+
+    # Fit points to helix equation
 
     def helix_error(coeffs, data_points):
         # coeffs: 0:radius, 1: w, 2:phi
@@ -59,11 +61,10 @@ def fit_helix_to_points(data_points, x0):
         
         return error
 
-    helix_results = minimize(helix_error, x0, args=(data_points), method="L-BFGS-B", bounds=bounds)
+    helix_results = minimize(helix_error, np.array([1,1,1]), args=(data_points), method="L-BFGS-B")
+    print(helix_results)
 
-
-
-    return(*helix_results.x, np.linalg.inv(rotation_matrix), center, axis_norm)
+    return(*helix_results.x[:3], np.linalg.inv(rotation_matrix), center, axis_norm)
 
 
 
@@ -106,15 +107,30 @@ def main():
 
     # Fit helix points to helix equation
     x0 = np.array([1, 0, 0, 0, 0, -0.6, 1])
-    radius, w, phi, rotation = fit_helix_to_points(test_helix, x0)
+    radius, w, phi, rotation, center, normal = fit_helix_to_points(test_helix, x0)
+
+    # Plot fitted helix
+    t = np.linspace(0, 20, 100)
+    fitted_helix = np.zeros([len(t), 3])
+    fitted_helix[:, 0] = radius * np.cos(w*t + phi)
+    fitted_helix[:, 1] = radius * np.sin(w*t + phi)
+    fitted_helix[:, 2] = t
+    fitted_helix = np.dot(fitted_helix, rotation.transpose())
+    ax.plot3D(fitted_helix[:, 0], fitted_helix[:, 1], fitted_helix[:, 2])
+
+
+
+    print("Helix Fit Summary")
+    print("Pitch", radius)
+    print("Radius", radius)
+    print("Radius", radius)
+    print("Radius", radius)
 
     # Show projection of helix on identified plane
-    point = np.array(x_solved[1:4])
+    point = center
     ax.scatter3D(point[0], point[1], point[2], c="black")
-    normal = np.array(x_solved[4:])
     normal = normal / np.sqrt(np.dot(normal, normal))
     print("Center:", point)
-    print("Average Point:", mean_helix_center)
     print("Normal:", normal)
     ax.plot3D(np.array([0, normal[0]])+point[0], np.array([0, normal[1]])+point[1], np.array([0, normal[2]])+point[2], "black")
 
