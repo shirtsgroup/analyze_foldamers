@@ -5,7 +5,7 @@ from mpl_toolkits import mplot3d
 from scipy.optimize._trustregion_constr.minimize_trustregion_constr import TERMINATION_MESSAGES
 
 
-def fit_helix_to_points(data_points, x0):
+def fit_helix_to_points(data_points, x0, print_results=False):
     """
     Given a series of 3D data points fits a helix to those points
     and returns fitting stats
@@ -31,6 +31,8 @@ def fit_helix_to_points(data_points, x0):
     bounds = [(low, high) for low, high in zip(xmin, xmax)]
 
     cyl_results = minimize(cylinder_error, x0, args=(data_points), method="L-BFGS-B", bounds=bounds)
+    if print_results:
+        print(cyl_results)
     # print(cyl_results)
 
     sse_cylinder = cyl_results.fun
@@ -56,29 +58,9 @@ def fit_helix_to_points(data_points, x0):
 
     transformed_points[:,2] = transformed_points[:,2] - lowest_z_val
 
-    # Fit points to helix equation
-
-    def linear_regress_phase(coeffs, data_points, radius):
-        # coeffs: 0:w 1:phi
-        w = coeffs[0]
-        phi = coeffs[1]
-        error = 0
-        phases = []
-        for i in range(data_points.shape[0]):
-            phase = np.arccos(data_points[i, 0]/radius)
-            phases.append(phase)
-            error += (phase - (w*data_points[i, 2] + phi))**2
-        # plt.figure()
-        # plt.scatter(data_points[:, 2], phases)
-        # x = np.linspace(np.min(data_points[:, 2]), np.max(data_points[:, 2]), 10)
-        # plt.plot(x, w*x+phi)
-        # plt.show()
-
-        return error
-
     def helix_error(coeffs, data_points, radius):
-        # coeffs: 0:radius, 1: w, 2:phi
-        radius = radius # 1 parameter
+        # coeffs: 0: w, 1:phi
+        radius = radius
         w = coeffs[0] # 1 parameter
         phi = coeffs[1] # 1 parameter
 
@@ -93,11 +75,22 @@ def fit_helix_to_points(data_points, x0):
 
     bounds = [(low, high) for low, high in zip(xmin, xmax)]
     helix_results = basinhopping(helix_error, np.array([0,0]), minimizer_kwargs=dict(args=(transformed_points, r), bounds=bounds, method="L-BFGS-B"))
+    if print_results:
+        print(helix_results)
 
     sse_helix = helix_results.fun
 
 
     z_tot = np.max(transformed_points)
+
+    if print_results:
+        print("Helix Fit Summary")
+        print("-----------------")
+        print("Radius:", r)
+        print("Angular Frequency:", helix_results.x[0])
+        print("Phase Shift:", helix_results.x[1])
+        print("RMSE Cylinder:", np.sqrt(sse_cylinder/transformed_points.shape[0]))
+        print("RMSE Helix:", np.sqrt(sse_helix/transformed_points.shape[0]))
 
     return(r, helix_results.x[0], helix_results.x[1], z_tot, np.linalg.inv(rotation_matrix), center, axis_norm, sse_helix, sse_cylinder)
 
