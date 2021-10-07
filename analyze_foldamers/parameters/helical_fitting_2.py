@@ -22,7 +22,6 @@ def fit_helix_to_points(data_points, x0):
 
         for i in range(data_points.shape[0]):
             error += (np.dot(np.dot(data_points[i, :] - C, np.eye(3) - np.outer(W,W)).transpose(),data_points[i, :] - C) - r_sq)**2
-        
         return error
 
     xmin = [0, -10, -10, -10, -1, -1, -1]
