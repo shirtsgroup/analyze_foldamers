@@ -16,9 +16,9 @@ Torsion angle distributions
 .. automodule:: analyze_foldamers.parameters.angle_distributions
     :members: calc_torsion_distribution
     
-Alpha-theta ramachandran plots
+2D histograms
 =========================================================  
     
 .. automodule:: analyze_foldamers.parameters.angle_distributions
-    :members: calc_ramachandran, fit_ramachandran_data
+    :members: calc_2d_distribution, calc_ramachandran, fit_ramachandran_data
 

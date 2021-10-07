@@ -52,8 +52,8 @@ def assign_bond_types(cgmodel, bond_list):
             bond_dict[reverse_string_name] = i_bond_type
             # For inverse dict we will use only the forward name based on first encounter
             inv_bond_dict[str(i_bond_type)] = string_name
-            print(f"adding new bond type {i_bond_type}: {string_name} to dictionary")
-            print(f"adding reverse version {i_bond_type}: {reverse_string_name} to dictionary")
+            # print(f"adding new bond type {i_bond_type}: {string_name} to dictionary")
+            # print(f"adding reverse version {i_bond_type}: {reverse_string_name} to dictionary")
             
         bond_types.append(bond_dict[string_name])
 
@@ -106,6 +106,8 @@ def calc_bond_length_distribution(
     :param plotfile: filename for saving bond length distribution pdf plots
     :type plotfile: str
     
+    :returns:
+       - bond_hist_data ( dict )
     """   
     
     # Convert file_list to list if a single string:
