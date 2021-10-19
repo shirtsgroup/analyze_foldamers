@@ -297,7 +297,7 @@ def get_cluster_medoid_positions_DBSCAN(
     if filter:
         # Filter distances:
         distances, dense_indices, filter_ratio_actual, original_indices = \
-            filter_distances(distances, filter_ratio=filter_ratio, return_original_indices = True, original_indices = original_indices)
+            filter_distances(distances, filter_ratio=filter_ratio, return_original_indices=True, original_indices=original_indices)
         
         traj_all = traj_all[dense_indices]
 
@@ -841,19 +841,23 @@ def get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end,
             
         # Compute pairwise rmsd between the reverse and forward structures:
         # (reverse to reverse will be the same as forward to forward)
-        distances_reverse = np.empty((traj_reverse.n_frames, traj_all.n_frames))
+        distances_reverse = np.empty((traj_all.n_frames, traj_reverse.n_frames))
         for i in range(traj_all.n_frames):
             distances_reverse[i] = md.rmsd(traj_reverse, traj_all, i)
             # Second argument is the reference traj to measure to.
     
         # Now, take the minimum distances:
         distances = np.empty((traj_all.n_frames, traj_all.n_frames))
+        n_reversed = 0
         for i in range(distances_reverse.shape[0]):
             for j in range(distances_reverse.shape[1]):
                 if distances_forward[i,j] < distances_reverse[i,j]:
                     distances[i,j] = distances_forward[i,j]
                 else:
                     distances[i,j] = distances_reverse[i,j]
+                    n_reversed += 1
+                    
+        print(f'{n_reversed} reverse distances used')
                 
     else:
         # Align structures with first frame as reference:
