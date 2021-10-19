@@ -814,10 +814,7 @@ def get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end,
 
     if homopolymer_sym:
         # Forward sequence:
-        
-        # Make a copy of the trajectories
-        traj_reverse = copy.deepcopy(traj_all)
-        
+
         # Align structures with first frame as reference:
         for i in range(1,traj_all.n_frames):
             md.Trajectory.superpose(traj_all[i],traj_all[0])
@@ -829,10 +826,19 @@ def get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end,
             distances_forward[i] = md.rmsd(traj_all, traj_all, i)
             
         # Reverse sequence:
+        positions_rev = np.empty((traj_all.n_frames, traj_all.n_atoms, 3))
 
         # Reverse the order of particle indices (coordinate rows)
-        for i in range(traj_reverse.n_frames):
-            traj_reverse[i].xyz = np.flipud(traj_reverse[i].xyz[0])
+        for i in range(traj_all.n_frames):
+            positions_rev[i] = traj_all[i].xyz[0][::-1]
+            
+        # Make a new MDTraj object for the reverse positions.
+        # (coordinates seemingly cannot be modified in an existing one)
+            
+        traj_reverse = md.Trajectory(
+            xyz=positions_rev,
+            topology=md.Topology.from_openmm(cgmodel.topology),
+        )
             
         # Re-superpose with the flipped coordinates.
         # Here the reference frame is the same as the original forward direction:
@@ -856,7 +862,7 @@ def get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end,
                 else:
                     distances[i,j] = distances_reverse[i,j]
                     n_reversed += 1
-                    
+
         print(f'{n_reversed} reverse distances used')
                 
     else:
