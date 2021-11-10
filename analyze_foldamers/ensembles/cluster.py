@@ -673,7 +673,7 @@ def filter_distances(distances, filter_ratio=0.25, return_original_indices=False
     # A value of 0.05 is reasonable for rmsd distances, 75 is reasonable for torsion n-dimensional euclidean distances
     
     # Bounds for brute force minimization (neither gradient or stochastic methods are reliable here)
-    bounds = (1.1*np.min(distaces),np.max(distances))
+    bounds = (1.1*np.min(distances),np.max(distances))
     
     # Starting number of neighbors within radius:
     density_cutoff = 1
