@@ -12,7 +12,7 @@ import matplotlib.cm as cm
 from cg_openmm.cg_model.cgmodel import CGModel
 from cg_openmm.utilities.iotools import write_pdbfile_without_topology
 from sklearn_extra.cluster import KMedoids
-from scipy.optimize import minimize, minimize_scalar
+from scipy.optimize import minimize, minimize_scalar, brute, fmin
     
 def get_representative_structures(
     file_list, cgmodel,
@@ -79,7 +79,8 @@ def get_cluster_medoid_positions_KMedoids(
     frame_start=0, frame_stride=1, frame_end=-1,
     output_format="pdb", output_dir="cluster_output",
     output_cluster_traj=False, plot_silhouette=True, plot_rmsd_hist=True,
-    filter=False, filter_ratio=0.25, homopolymer_sym=False):
+    filter=False, filter_ratio=0.25, filter_brute_step=0.1,
+    homopolymer_sym=False):
     """
     Given PDB or DCD trajectory files and coarse grained model as input, this function performs K-medoids clustering on the poses in trajectory, and returns a list of the coordinates for the medoid pose of each cluster.
 
@@ -122,6 +123,9 @@ def get_cluster_medoid_positions_KMedoids(
     :param filter_ratio: fraction of data points which pass through the neighborhood radius filter (default=0.05)
     :type filter_ratio: float
     
+    :param filter_brute_step: step size in distance units for brute force filter radius optimization (final optimization searches between intervals) (default=0.1)
+    :type filter_brute_step: float    
+    
     :param homopolymer_sym: if there is end-to-end symmetry, scan forwards and backwards sequences for lowest rmsd (default=False)
     :type homopolymer_sym: boolean
 
@@ -148,7 +152,10 @@ def get_cluster_medoid_positions_KMedoids(
     if filter:
         # Filter distances:
         distances, dense_indices, filter_ratio_actual, original_indices = \
-            filter_distances(distances, filter_ratio=filter_ratio, return_original_indices = True, original_indices = original_indices)
+            filter_distances(distances,
+                filter_ratio=filter_ratio, filter_brute_step=filter_brute_step,
+                return_original_indices=True, original_indices=original_indices
+                )
 
     if plot_rmsd_hist:
         distances_row = np.reshape(distances, (distances.shape[0]*distances.shape[1],1))
@@ -226,7 +233,7 @@ def get_cluster_medoid_positions_DBSCAN(
     file_list, cgmodel, min_samples=5, eps=0.5,
     frame_start=0, frame_stride=1, frame_end=-1, output_format="pdb",
     output_dir="cluster_output", output_cluster_traj=False, plot_silhouette=True,
-    plot_rmsd_hist=True, filter=True, filter_ratio=0.25,
+    plot_rmsd_hist=True, filter=True, filter_ratio=0.25, filter_brute_step=0.1,
     core_points_only=True, homopolymer_sym=False):
     """
     Given PDB or DCD trajectory files and coarse grained model as input, this function performs DBSCAN clustering on the poses in the trajectory, and returns a list of the coordinates for the medoid pose of each cluster.
@@ -267,6 +274,9 @@ def get_cluster_medoid_positions_DBSCAN(
     :param filter_ratio: fraction of data points which pass through the neighborhood radius filter (default=0.05)
     :type filter_ratio: float
     
+    :param filter_brute_step: step size in distance units for brute force filter radius optimization (final optimization searches between intervals) (default=0.1)
+    :type filter_brute_step: float     
+    
     :param core_points_only: use only core points to calculate medoid structures (default=True)
     :type core_points_only: boolean
     
@@ -297,8 +307,10 @@ def get_cluster_medoid_positions_DBSCAN(
     if filter:
         # Filter distances:
         distances, dense_indices, filter_ratio_actual, original_indices = \
-            filter_distances(distances, filter_ratio=filter_ratio, return_original_indices=True, original_indices=original_indices)
-        
+            filter_distances(distances,
+                filter_ratio=filter_ratio, filter_brute_step=filter_brute_step,
+                return_original_indices=True, original_indices=original_indices
+                )
         traj_all = traj_all[dense_indices]
 
     if plot_rmsd_hist:
@@ -437,7 +449,8 @@ def get_cluster_medoid_positions_DBSCAN(
 def get_cluster_medoid_positions_OPTICS(
     file_list, cgmodel, min_samples=5, xi=0.05,
     frame_start=0, frame_stride=1, frame_end=-1, output_format="pdb", output_dir="cluster_output", output_cluster_traj = False,
-    plot_silhouette=True, plot_rmsd_hist=True, filter=True, filter_ratio=0.05, homopolymer_sym=False):
+    plot_silhouette=True, plot_rmsd_hist=True, filter=True, filter_ratio=0.05, filter_brute_step=0.1,
+    homopolymer_sym=False):
     """
     Given PDB or DCD trajectory files and coarse grained model as input, this function performs OPTICS clustering on the poses in the trajectory, and returns a list of the coordinates for the medoid pose of each cluster.
 
@@ -477,6 +490,9 @@ def get_cluster_medoid_positions_OPTICS(
     :param filter_ratio: fraction of data points which pass through the neighborhood radius filter (default=0.05)
     :type filter_ratio: float
     
+    :param filter_brute_step: step size in distance units for brute force filter radius optimization (final optimization searches between intervals) (default=0.1)
+    :type filter_brute_step: float     
+    
     :param homopolymer_sym: if there is end-to-end symmetry, scan forwards and backwards sequences for lowest rmsd (default=False)
     :type homopolymer_sym: boolean    
 
@@ -502,8 +518,10 @@ def get_cluster_medoid_positions_OPTICS(
     if filter:
         # Filter distances:
         distances, dense_indices, filter_ratio_actual, original_indices = \
-            filter_distances(distances, filter_ratio=filter_ratio, return_original_indices = True, original_indices = original_indices)
-        
+            filter_distances(distances,
+                filter_ratio=filter_ratio, filter_brute_step=filter_brute_step,
+                return_original_indices=True, original_indices=original_indices
+                )
         traj_all = traj_all[dense_indices]
 
     
@@ -610,7 +628,8 @@ def get_cluster_medoid_positions_OPTICS(
     return medoid_positions, cluster_sizes, cluster_rmsd, n_noise, silhouette_avg, labels, original_indices
     
     
-def filter_distances(distances, filter_ratio=0.25, return_original_indices=False, original_indices=None):
+def filter_distances(distances, filter_ratio=0.25, return_original_indices=False, original_indices=None,
+    filter_brute_step=0.1):
     """
     Function for filtering out data points with few neighbors within a cutoff radius
     
@@ -619,6 +638,9 @@ def filter_distances(distances, filter_ratio=0.25, return_original_indices=False
     
     :param filter_ratio: desired fraction of data remaining after neighborhood radius filtering
     :type filter_ratio: float
+    
+    :param filter_brute_step: step size in distance units for brute force filter radius optimization (final optimization searches between intervals) (default=0.1)
+    :type filter_brute_step: float    
     
     :returns:
        - distances_filtered (2d numpy array) - distance matrix of data points satisfying filter parameters
@@ -649,28 +671,47 @@ def filter_distances(distances, filter_ratio=0.25, return_original_indices=False
     
     # Optimize cutoff_radius, density_cutoff parameters to get desired filter ratio
     # A value of 0.05 is reasonable for rmsd distances, 75 is reasonable for torsion n-dimensional euclidean distances
-    bounds = (0,np.max(distances))
+    
+    # Bounds for brute force minimization (neither gradient or stochastic methods are reliable here)
+    bounds = (1.1*np.min(distaces),np.max(distances))
     
     # Starting number of neighbors within radius:
     density_cutoff = 1
     convergence = False
     
-    while convergence == False:
-        results = minimize_scalar(
-            get_filter_ratio, args=(density_cutoff), method='bounded',
-            bounds=bounds,
-            options={'xatol': 1e-06},
-            )
+    # Save all the results in case we don't meet the specified tolerance:
+    saved_results = {}
+    f_vals = []
     
-        cutoff_radius = results.x
-        if results.fun <= 1E-6:
+    # Construct vector of brute force radii to test:
+    brute_range = [slice(bounds[0],bounds[1],filter_brute_step)]
+    
+    while convergence == False:
+        results = brute(
+            get_filter_ratio, brute_range, args=(density_cutoff,),
+            full_output=True,finish=fmin,
+            )
+            
+        saved_results[density_cutoff] = results
+        f_vals.append(results[1])
+    
+        cutoff_radius = results[0]
+        if results[1] <= 1E-6:
             convergence = True
         else:
             density_cutoff += 1
             
         if density_cutoff > 15:
             break
-    
+            
+    f_vals_array = np.asarray(f_vals)
+            
+    # If filtering tolerance not met, use the best value:        
+    if convergence == False:
+        opt_index = np.argmin(f_vals_array)
+        density_cutoff = opt_index+1
+        cutoff_radius = saved_results[density_cutoff][1]
+        
     # Apply filtering parameters:
     
     neighbors = np.zeros((len(distances[:,0])))
