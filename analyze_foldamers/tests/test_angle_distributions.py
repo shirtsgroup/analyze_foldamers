@@ -11,6 +11,7 @@ import pickle
 from cg_openmm.cg_model.cgmodel import CGModel
 from analyze_foldamers.parameters.bond_distributions import *
 from analyze_foldamers.parameters.angle_distributions import *
+from analyze_foldamers.parameters.radius_gyration import *
 
 def test_analyze_foldamers_imported():
     """Sample test, will always pass so long as import statement worked"""
@@ -372,24 +373,98 @@ def test_2d_dist_angle_torsion_dcd(tmpdir):
     assert os.path.isfile(f"{output_directory}/angle_torsion_2d.pdf")   
 
 
-def test_2d_dist_torsion_torsion_dcd(tmpdir):
-    """Test general 2d histogram - torsion-torsion correlation"""
+def test_radius_gyration_pdb(tmpdir):
+    """Test radius of gyration"""
     output_directory = tmpdir.mkdir("output")
     
     # Load in a trajectory pdb file:
-    traj_file = os.path.join(data_path, "replica_1.dcd")
+    traj_file = os.path.join(data_path,"replica_1.pdb")
     
     # Load in a CGModel:
-    cgmodel_path = os.path.join(data_path, "stored_cgmodel.pkl")
-    cgmodel = pickle.load(open(cgmodel_path, "rb"))
+    cgmodel_path = os.path.join(data_path,"stored_cgmodel.pkl")
+    cgmodel = pickle.load(open(cgmodel_path,"rb"))
 
-    hist_out, xedges, yedges = calc_2d_distribution(
+    rg_data, rg_hist_data = calc_radius_gyration(
         cgmodel,
         traj_file,
-        plotfile=f"{output_directory}/torsion_torsion_2d.pdf",
-        xvar_name='bb_bb_bb_sc',
-        yvar_name='sc_bb_bb_sc',
+        frame_start=5,
+        frame_stride=2,
+        frame_end=50,
+        plotfile=f"{output_directory}/rg_dist.pdf",
     )
-     
-    assert os.path.isfile(f"{output_directory}/torsion_torsion_2d.pdf")       
+
+    assert os.path.isfile(f"{output_directory}/rg_dist.pdf")    
+
+
+def test_radius_gyration_pdb_multi(tmpdir):
+    """Test radius of gyration"""
+    output_directory = tmpdir.mkdir("output")
+    
+    # Load in trajectory dcd files:
+    traj_file_list = []
+    for i in range(3):
+        traj_file_list.append(os.path.join(data_path, f"replica_{i+1}.pdb"))
+    
+    # Load in a CGModel:
+    cgmodel_path = os.path.join(data_path,"stored_cgmodel.pkl")
+    cgmodel = pickle.load(open(cgmodel_path,"rb"))
+
+    rg_data, rg_hist_data = calc_radius_gyration(
+        cgmodel,
+        traj_file_list,
+        frame_start=5,
+        frame_stride=2,
+        frame_end=50,
+        plotfile=f"{output_directory}/rg_dist.pdf",
+    )
+
+    assert os.path.isfile(f"{output_directory}/rg_dist.pdf")   
+
+
+def test_radius_gyration_dcd(tmpdir):
+    """Test radius of gyration"""
+    output_directory = tmpdir.mkdir("output")
+    
+    # Load in a trajectory pdb file:
+    traj_file = os.path.join(data_path,"replica_1.dcd")
+    
+    # Load in a CGModel:
+    cgmodel_path = os.path.join(data_path,"stored_cgmodel.pkl")
+    cgmodel = pickle.load(open(cgmodel_path,"rb"))
+
+    rg_data, rg_hist_data = calc_radius_gyration(
+        cgmodel,
+        traj_file,
+        frame_start=5,
+        frame_stride=2,
+        frame_end=50,
+        plotfile=f"{output_directory}/rg_dist.pdf",
+    )
+
+    assert os.path.isfile(f"{output_directory}/rg_dist.pdf")    
+
+
+def test_radius_gyration_dcd_multi(tmpdir):
+    """Test radius of gyration"""
+    output_directory = tmpdir.mkdir("output")
+    
+    # Load in trajectory dcd files:
+    traj_file_list = []
+    for i in range(3):
+        traj_file_list.append(os.path.join(data_path, f"replica_{i+1}.dcd"))
+    
+    # Load in a CGModel:
+    cgmodel_path = os.path.join(data_path,"stored_cgmodel.pkl")
+    cgmodel = pickle.load(open(cgmodel_path,"rb"))
+
+    rg_data, rg_hist_data = calc_radius_gyration(
+        cgmodel,
+        traj_file_list,
+        frame_start=5,
+        frame_stride=2,
+        frame_end=50,
+        plotfile=f"{output_directory}/rg_dist.pdf",
+    )
+
+    assert os.path.isfile(f"{output_directory}/rg_dist.pdf")         
     
