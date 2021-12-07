@@ -79,7 +79,7 @@ def get_cluster_medoid_positions_KMedoids(
     frame_start=0, frame_stride=1, frame_end=-1,
     output_format="pdb", output_dir="cluster_output",
     output_cluster_traj=False, plot_silhouette=True, plot_rmsd_hist=True,
-    filter=False, filter_ratio=0.25, filter_brute_step=0.1,
+    filter=False, filter_ratio=0.25, filter_brute_step=0.05,
     homopolymer_sym=False):
     """
     Given PDB or DCD trajectory files and coarse grained model as input, this function performs K-medoids clustering on the poses in trajectory, and returns a list of the coordinates for the medoid pose of each cluster.
@@ -120,10 +120,10 @@ def get_cluster_medoid_positions_KMedoids(
     :param filter: option to apply neighborhood radius filtering to remove low-density data (default=False)
     :type filter: boolean
     
-    :param filter_ratio: fraction of data points which pass through the neighborhood radius filter (default=0.05)
+    :param filter_ratio: fraction of data points which pass through the neighborhood radius filter (default=0.25)
     :type filter_ratio: float
     
-    :param filter_brute_step: step size in distance units for brute force filter radius optimization (final optimization searches between intervals) (default=0.1)
+    :param filter_brute_step: step size in distance units for brute force filter radius optimization (final optimization searches between intervals) (default=0.05)
     :type filter_brute_step: float    
     
     :param homopolymer_sym: if there is end-to-end symmetry, scan forwards and backwards sequences for lowest rmsd (default=False)
@@ -233,7 +233,7 @@ def get_cluster_medoid_positions_DBSCAN(
     file_list, cgmodel, min_samples=5, eps=0.5,
     frame_start=0, frame_stride=1, frame_end=-1, output_format="pdb",
     output_dir="cluster_output", output_cluster_traj=False, plot_silhouette=True,
-    plot_rmsd_hist=True, filter=True, filter_ratio=0.25, filter_brute_step=0.1,
+    plot_rmsd_hist=True, filter=True, filter_ratio=0.25, filter_brute_step=0.05,
     core_points_only=True, homopolymer_sym=False):
     """
     Given PDB or DCD trajectory files and coarse grained model as input, this function performs DBSCAN clustering on the poses in the trajectory, and returns a list of the coordinates for the medoid pose of each cluster.
@@ -271,10 +271,10 @@ def get_cluster_medoid_positions_DBSCAN(
     :param filter: option to apply neighborhood radius filtering to remove low-density data (default=True)
     :type filter: boolean
     
-    :param filter_ratio: fraction of data points which pass through the neighborhood radius filter (default=0.05)
+    :param filter_ratio: fraction of data points which pass through the neighborhood radius filter (default=0.25)
     :type filter_ratio: float
     
-    :param filter_brute_step: step size in distance units for brute force filter radius optimization (final optimization searches between intervals) (default=0.1)
+    :param filter_brute_step: step size in distance units for brute force filter radius optimization (final optimization searches between intervals) (default=0.05)
     :type filter_brute_step: float     
     
     :param core_points_only: use only core points to calculate medoid structures (default=True)
@@ -449,7 +449,7 @@ def get_cluster_medoid_positions_DBSCAN(
 def get_cluster_medoid_positions_OPTICS(
     file_list, cgmodel, min_samples=5, xi=0.05,
     frame_start=0, frame_stride=1, frame_end=-1, output_format="pdb", output_dir="cluster_output", output_cluster_traj = False,
-    plot_silhouette=True, plot_rmsd_hist=True, filter=True, filter_ratio=0.05, filter_brute_step=0.1,
+    plot_silhouette=True, plot_rmsd_hist=True, filter=True, filter_ratio=0.25, filter_brute_step=0.05,
     homopolymer_sym=False):
     """
     Given PDB or DCD trajectory files and coarse grained model as input, this function performs OPTICS clustering on the poses in the trajectory, and returns a list of the coordinates for the medoid pose of each cluster.
@@ -487,10 +487,10 @@ def get_cluster_medoid_positions_OPTICS(
     :param filter: option to apply neighborhood radius filtering to remove low-density data (default=True)
     :type filter: boolean
     
-    :param filter_ratio: fraction of data points which pass through the neighborhood radius filter (default=0.05)
+    :param filter_ratio: fraction of data points which pass through the neighborhood radius filter (default=0.25)
     :type filter_ratio: float
     
-    :param filter_brute_step: step size in distance units for brute force filter radius optimization (final optimization searches between intervals) (default=0.1)
+    :param filter_brute_step: step size in distance units for brute force filter radius optimization (final optimization searches between intervals) (default=0.05)
     :type filter_brute_step: float     
     
     :param homopolymer_sym: if there is end-to-end symmetry, scan forwards and backwards sequences for lowest rmsd (default=False)
@@ -629,7 +629,7 @@ def get_cluster_medoid_positions_OPTICS(
     
     
 def filter_distances(distances, filter_ratio=0.25, return_original_indices=False, original_indices=None,
-    filter_brute_step=0.1):
+    filter_brute_step=0.05):
     """
     Function for filtering out data points with few neighbors within a cutoff radius
     
@@ -639,7 +639,7 @@ def filter_distances(distances, filter_ratio=0.25, return_original_indices=False
     :param filter_ratio: desired fraction of data remaining after neighborhood radius filtering
     :type filter_ratio: float
     
-    :param filter_brute_step: step size in distance units for brute force filter radius optimization (final optimization searches between intervals) (default=0.1)
+    :param filter_brute_step: step size in distance units for brute force filter radius optimization (final optimization searches between intervals) (default=0.05)
     :type filter_brute_step: float    
     
     :returns:
@@ -673,7 +673,8 @@ def filter_distances(distances, filter_ratio=0.25, return_original_indices=False
     # A value of 0.05 is reasonable for rmsd distances, 75 is reasonable for torsion n-dimensional euclidean distances
     
     # Bounds for brute force minimization (neither gradient or stochastic methods are reliable here)
-    bounds = (1.1*np.min(distances),np.max(distances))
+    # Here we set the lower bound to 1 brute step (finisher miniimization can find a solution below it if too large)
+    bounds = (filter_brute_step,np.max(distances))
     
     # Starting number of neighbors within radius:
     density_cutoff = 1
@@ -696,7 +697,8 @@ def filter_distances(distances, filter_ratio=0.25, return_original_indices=False
         f_vals.append(results[1])
     
         cutoff_radius = results[0]
-        if results[1] <= 1E-6:
+        if results[1] <= 1E-6 and results[1] != filter_ratio_target:
+            # Second check is to tell if all data was filtered out (filter_ratio of 0)
             convergence = True
         else:
             density_cutoff += 1
