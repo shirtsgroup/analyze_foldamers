@@ -874,7 +874,12 @@ def get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end,
     # sequences for the lowest RMSD.
 
     if homopolymer_sym:
-        # Forward sequence:
+        # ***Note: this assumes that the particles are indexed by monomer, and in the same
+        # order for each monomer.
+    
+        #------------------------#
+        # Forward sequence       #
+        #------------------------#
 
         # Align structures with first frame as reference:
         for i in range(1,traj_all.n_frames):
@@ -886,12 +891,43 @@ def get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end,
         for i in range(traj_all.n_frames):
             distances_forward[i] = md.rmsd(traj_all, traj_all, i)
             
-        # Reverse sequence:
+        #------------------------#
+        # Reverse sequence       #
+        #------------------------#
+        
+        # We need to use the particle type list of the original model,
+        # and reconstruct monomer by monomer from the opposite end.
+         
+        n_particles = rep_traj[0].n_atoms
+        
+        particle_type_list = []
+        particle_indices_forward = []
+        particle_indices_reverse = []
+
+        for p in range(n_particles):
+            particle_indices_forward.append(p)
+            particle_type_list.append(cgmodel.get_particle_type_name(p))
+        
+        n_particles_per_mono = 0
+        
+        for p in range(n_particles):
+            if cgmodel.get_particle_monomer(p) == 0:
+                n_particles_per_mono += 1
+            else:
+                break
+        
+        n_mono = int(n_particles/n_particles_per_mono)
+        
+        for m in range(n_mono):
+            for p in range(n_particles_per_mono):
+                particle_indices_reverse.append(n_particles - n_particles_per_mono*(m+1) + p)        
+
         positions_rev = np.empty((traj_all.n_frames, traj_all.n_atoms, 3))
 
-        # Reverse the order of particle indices (coordinate rows)
+        # Reassign the particle coordinates by the reverse index (coordinate rows)
         for i in range(traj_all.n_frames):
-            positions_rev[i] = traj_all[i].xyz[0][::-1]
+            for j in range(traj_all.n_atoms):
+                positions_rev[i,particle_indices_reverse[j],:] = traj_all[i].xyz[0][particle_indices_forward[j]]
             
         # Make a new MDTraj object for the reverse positions.
         # (coordinates seemingly cannot be modified in an existing one)

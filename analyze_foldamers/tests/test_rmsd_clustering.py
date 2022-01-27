@@ -317,6 +317,52 @@ def test_clustering_dbscan_dcd(tmpdir):
     assert os.path.isfile(f"{output_directory}/distances_rmsd_hist.pdf")    
     
     
+def test_clustering_dbscan_dcd_homopolymer_sym(tmpdir):
+    """Test DBSCAN clustering, with end-to-end symmetry check for a 1-1 homopolymer model"""
+    
+    output_directory = tmpdir.mkdir("output")
+    
+    # Load in cgmodel
+    cgmodel_path = os.path.join(data_path, "stored_cgmodel.pkl")
+    cgmodel = pickle.load(open(cgmodel_path, "rb"))
+    
+    # Create list of trajectory files for clustering analysis
+    number_replicas = 12
+    dcd_file_list = []
+    for i in range(number_replicas):
+        dcd_file_list.append(f"{data_path}/replica_%s.dcd" %(i+1))
+
+    # Set clustering parameters
+    min_samples=3
+    eps=0.5
+    frame_start=10
+    frame_stride=1
+    frame_end=-1
+
+    # Run OPTICS density-based clustering
+    medoid_positions, cluster_sizes, cluster_rmsd, n_noise, silhouette_avg, labels, original_indices = \
+        get_cluster_medoid_positions_DBSCAN(
+            dcd_file_list,
+            cgmodel,
+            min_samples=min_samples,
+            eps=eps,
+            frame_start=frame_start,
+            frame_stride=frame_stride,
+            frame_end=-1,
+            output_format="dcd",
+            output_dir=output_directory,
+            plot_silhouette=True,
+            plot_rmsd_hist=True,
+            homopolymer_sym=True,
+            filter=True,
+            filter_ratio=0.20,
+            core_points_only=False,
+        )
+    assert len(labels) == len(original_indices)
+    assert os.path.isfile(f"{output_directory}/medoid_0.dcd")
+    assert os.path.isfile(f"{output_directory}/distances_rmsd_hist.pdf")      
+    
+    
 def test_clustering_optics_pdb(tmpdir):
     """Test OPTICS clustering"""
     
@@ -357,6 +403,7 @@ def test_clustering_optics_pdb(tmpdir):
     assert os.path.isfile(f"{output_directory}/medoid_0.pdb")
     assert os.path.isfile(f"{output_directory}/distances_rmsd_hist.pdf") 
 
+
 def test_clustering_optics_pdb_no_cgmodel(tmpdir):
     """Test OPTICS clustering without a cgmodel object"""
     
@@ -392,7 +439,6 @@ def test_clustering_optics_pdb_no_cgmodel(tmpdir):
     assert len(labels) == len(original_indices)
     assert os.path.isfile(f"{output_directory}/medoid_0.pdb")
     assert os.path.isfile(f"{output_directory}/distances_rmsd_hist.pdf") 
-
 
     
 def test_clustering_optics_dcd(tmpdir):
@@ -435,6 +481,7 @@ def test_clustering_optics_dcd(tmpdir):
     assert len(labels) == len(original_indices)
     assert os.path.isfile(f"{output_directory}/medoid_0.dcd")   
     assert os.path.isfile(f"{output_directory}/distances_rmsd_hist.pdf")
+
 
 def test_clustering_dbscan_pdb_output_clusters(tmpdir):
     """Test DBSCAN clustering"""
