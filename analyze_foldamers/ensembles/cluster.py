@@ -876,6 +876,8 @@ def get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end,
     if homopolymer_sym:
         # ***Note: this assumes that the particles are indexed by monomer, and in the same
         # order for each monomer.
+        # We check if the model is a linear homopolymer, since there may be multiple backbone
+        # beads per monomer.
     
         #------------------------#
         # Forward sequence       #
@@ -908,19 +910,33 @@ def get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end,
             particle_indices_forward.append(p)
             particle_type_list.append(cgmodel.get_particle_type_name(p))
         
-        n_particles_per_mono = 0
+        # Check if linear chain with multiple beads per monomer:
+        mono = cgmodel.monomer_types
+        if len(mono) > 1:
+            print(f'Error: cannot apply end-to-end symmetry with multiple monomer types')
+            exit()
         
-        for p in range(n_particles):
-            if cgmodel.get_particle_monomer(p) == 0:
-                n_particles_per_mono += 1
-            else:
-                break
+        mono = mono[0]
+        mono_bond_start = mono['start']
+        mono_bond_end = mono['end']
+        mono_bond_list = mono['bond_list']
+        mono_particle_sequence = mono['particle_sequence']
+
+        #***TODO: add rigorous check for linear topology here.
         
+        n_particle_unique = len(set(particle_type_list))
+        
+        n_particles_per_mono = len(mono_particle_sequence)
+
         n_mono = int(n_particles/n_particles_per_mono)
         
-        for m in range(n_mono):
-            for p in range(n_particles_per_mono):
-                particle_indices_reverse.append(n_particles - n_particles_per_mono*(m+1) + p)        
+        if n_particle_unique == 1:
+            particle_indices_reverse = particle_indices_forward[::-1]
+        
+        else:
+            for m in range(n_mono):
+                for p in range(n_particles_per_mono):
+                    particle_indices_reverse.append(n_particles - n_particles_per_mono*(m+1) + p)        
 
         positions_rev = np.empty((traj_all.n_frames, traj_all.n_atoms, 3))
 
