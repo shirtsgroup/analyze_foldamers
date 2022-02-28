@@ -10,6 +10,7 @@ dependencies:
   - numpy
   - openmm
   - openmmtools
+  - physical_validation
   - pickleshare
   - pip
   - pymbar
@@ -27,4 +28,3 @@ dependencies:
     - codecov
     - flake8
     - git+https://github.com/shirtsgroup/cg_openmm.git
-    - git+https://github.com/shirtsgroup/physical-validation.git
