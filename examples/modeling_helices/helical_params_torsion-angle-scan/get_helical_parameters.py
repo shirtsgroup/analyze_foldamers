@@ -1,18 +1,17 @@
 import os
-import numpy as np
-import matplotlib.pyplot as pyplot
 from statistics import mean
-from simtk import unit
-from foldamers.cg_model.cgmodel import CGModel
-from foldamers.parameters.reweight import (
-    get_mbar_expectation,
-    get_free_energy_differences,
-    get_temperature_list,
-)
-from foldamers.thermo.calc import calculate_heat_capacity
-from foldamers.parameters.secondary_structure import get_helical_parameters
+
+import matplotlib.pyplot as pyplot
+import numpy as np
 from cg_openmm.build.cg_build import build_topology
+from cg_openmm.cg_model.cgmodel import CGModel
+from cg_openmm.parameters.reweight import (get_free_energy_differences,
+                                           get_mbar_expectation,
+                                           get_temperature_list)
+from cg_openmm.parameters.secondary_structure import get_helical_parameters
 from cg_openmm.simulation.rep_exch import *
+from cg_openmm.thermo.calc import calculate_heat_capacity
+from openmm import unit
 
 grid_size = 4
 

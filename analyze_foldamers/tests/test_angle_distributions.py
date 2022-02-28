@@ -2,15 +2,17 @@
 Unit and regression test for the analyze_foldamers package.
 """
 
+import os
+import pickle
+import sys
+
 # Import package, test suite, and other packages as needed
 import analyze_foldamers
 import pytest
-import sys
-import os
-import pickle
-from cg_openmm.cg_model.cgmodel import CGModel
-from analyze_foldamers.parameters.bond_distributions import *
 from analyze_foldamers.parameters.angle_distributions import *
+from analyze_foldamers.parameters.bond_distributions import *
+from cg_openmm.cg_model.cgmodel import CGModel
+
 
 def test_analyze_foldamers_imported():
     """Sample test, will always pass so long as import statement worked"""

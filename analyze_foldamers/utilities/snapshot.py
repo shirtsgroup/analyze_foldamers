@@ -1,5 +1,7 @@
 import os
+
 import numpy as np
+
 
 def take_snapshot(file_list):
     """

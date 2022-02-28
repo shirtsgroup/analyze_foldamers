@@ -1,18 +1,20 @@
 import os
-import simtk.unit as unit
+
+import matplotlib.cm as cm
+import matplotlib.pyplot as plt
 import mdtraj as md
 import numpy as np
-from sklearn.cluster import KMeans, OPTICS, DBSCAN
-from sklearn.cluster import AgglomerativeClustering, SpectralClustering
-from sklearn.metrics import silhouette_score, silhouette_samples
 from analyze_foldamers.parameters.angle_distributions import *
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 from cg_openmm.cg_model.cgmodel import CGModel
 from cg_openmm.utilities.iotools import write_pdbfile_without_topology
+from openmm import unit
+from scipy.optimize import minimize
+from sklearn.cluster import (DBSCAN, OPTICS, AgglomerativeClustering, KMeans,
+                             SpectralClustering)
+from sklearn.metrics import silhouette_samples, silhouette_score
 from sklearn_extra.cluster import KMedoids
-from scipy.optimize import minimize    
-    
+
+
 def get_representative_structures(
     file_list, cgmodel,
     frame_start=0, frame_stride=1, frame_end=-1,
