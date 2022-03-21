@@ -6,7 +6,7 @@ import mdtraj as md
 import numpy as np
 from analyze_foldamers.ensembles.cluster import *
 from cg_openmm.cg_model.cgmodel import CGModel
-from simtk import unit
+from openmm import unit
 
 # Load in cgmodel
 cgmodel = pickle.load(open( "stored_cgmodel.pkl", "rb" ))
