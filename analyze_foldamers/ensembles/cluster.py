@@ -1,3 +1,4 @@
+import copy
 import os
 
 import matplotlib.cm as cm
@@ -8,9 +9,8 @@ from analyze_foldamers.parameters.angle_distributions import *
 from cg_openmm.cg_model.cgmodel import CGModel
 from cg_openmm.utilities.iotools import write_pdbfile_without_topology
 from openmm import unit
-from scipy.optimize import minimize
-from sklearn.cluster import (DBSCAN, OPTICS, AgglomerativeClustering, KMeans,
-                             SpectralClustering)
+from scipy.optimize import brute, fmin, minimize, minimize_scalar
+from sklearn.cluster import DBSCAN, OPTICS, KMeans
 from sklearn.metrics import silhouette_samples, silhouette_score
 from sklearn_extra.cluster import KMedoids
 
@@ -18,7 +18,7 @@ from sklearn_extra.cluster import KMedoids
 def get_representative_structures(
     file_list, cgmodel,
     frame_start=0, frame_stride=1, frame_end=-1,
-    output_format="pdb", output_dir="cluster_output"):
+    output_format="pdb", output_dir="cluster_output", homopolymer_sym=False):
     """
     Using the similarity matrix from RMSD distances, determine a representative structure for each
     file in file_list    
@@ -37,6 +37,9 @@ def get_representative_structures(
 
     :param frame_end: Last frame in trajectory file to use for clustering.
     :type frame_end: int
+    
+    :param homopolymer_sym: if there is end-to-end symmetry, scan forwards and backwards sequences for lowest rmsd (default=False)
+    :type homopolymer_sym: boolean
     """
     
     if not os.path.exists(output_dir):
@@ -49,7 +52,8 @@ def get_representative_structures(
     file_list_out = []
     
     for file in file_list:
-        distances, traj_all = get_rmsd_matrix(file, cgmodel, frame_start, frame_stride, frame_end)
+        distances, traj_all = get_rmsd_matrix(file, cgmodel, frame_start, frame_stride, frame_end,
+            homopolymer_sym=homopolymer_sym)
         # Compute medoid based on similarity scores:
         medoid_index = np.exp(-distances/distances.std()).sum(axis=1).argmax()
             
@@ -76,7 +80,8 @@ def get_cluster_medoid_positions_KMedoids(
     frame_start=0, frame_stride=1, frame_end=-1,
     output_format="pdb", output_dir="cluster_output",
     output_cluster_traj=False, plot_silhouette=True, plot_rmsd_hist=True,
-    filter=False, filter_ratio=0.25):
+    filter=False, filter_ratio=0.25, filter_brute_step=0.05,
+    homopolymer_sym=False):
     """
     Given PDB or DCD trajectory files and coarse grained model as input, this function performs K-medoids clustering on the poses in trajectory, and returns a list of the coordinates for the medoid pose of each cluster.
 
@@ -116,8 +121,14 @@ def get_cluster_medoid_positions_KMedoids(
     :param filter: option to apply neighborhood radius filtering to remove low-density data (default=False)
     :type filter: boolean
     
-    :param filter_ratio: fraction of data points which pass through the neighborhood radius filter (default=0.05)
+    :param filter_ratio: fraction of data points which pass through the neighborhood radius filter (default=0.25)
     :type filter_ratio: float
+    
+    :param filter_brute_step: step size in distance units for brute force filter radius optimization (final optimization searches between intervals) (default=0.05)
+    :type filter_brute_step: float    
+    
+    :param homopolymer_sym: if there is end-to-end symmetry, scan forwards and backwards sequences for lowest rmsd (default=False)
+    :type homopolymer_sym: boolean
 
     :returns:
        - medoid_positions ( np.array( float * unit.angstrom ( n_clusters x num_particles x 3 ) ) ) - A 3D numpy array of poses corresponding to the medoids of all trajectory clusters.
@@ -135,12 +146,17 @@ def get_cluster_medoid_positions_KMedoids(
     if cgmodel is None:
         top_from_pdb = file_list[0]
     
-    distances, traj_all, original_indices = get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end, return_original_indices=True)
+    distances, traj_all, original_indices = get_rmsd_matrix(
+        file_list, cgmodel, frame_start, frame_stride, frame_end,
+        return_original_indices=True, homopolymer_sym=homopolymer_sym)
     
     if filter:
         # Filter distances:
         distances, dense_indices, filter_ratio_actual, original_indices = \
-            filter_distances(distances, filter_ratio=filter_ratio, return_original_indices = True, original_indices = original_indices)
+            filter_distances(distances,
+                filter_ratio=filter_ratio, filter_brute_step=filter_brute_step,
+                return_original_indices=True, original_indices=original_indices
+                )
 
     if plot_rmsd_hist:
         distances_row = np.reshape(distances, (distances.shape[0]*distances.shape[1],1))
@@ -217,9 +233,9 @@ def get_cluster_medoid_positions_KMedoids(
 def get_cluster_medoid_positions_DBSCAN(
     file_list, cgmodel, min_samples=5, eps=0.5,
     frame_start=0, frame_stride=1, frame_end=-1, output_format="pdb",
-    output_dir="cluster_output", output_cluster_traj = False, plot_silhouette=True,
-    plot_rmsd_hist=True, filter=True, filter_ratio=0.25,
-    core_points_only=True):
+    output_dir="cluster_output", output_cluster_traj=False, plot_silhouette=True,
+    plot_rmsd_hist=True, filter=True, filter_ratio=0.25, filter_brute_step=0.05,
+    core_points_only=True, homopolymer_sym=False):
     """
     Given PDB or DCD trajectory files and coarse grained model as input, this function performs DBSCAN clustering on the poses in the trajectory, and returns a list of the coordinates for the medoid pose of each cluster.
 
@@ -256,11 +272,17 @@ def get_cluster_medoid_positions_DBSCAN(
     :param filter: option to apply neighborhood radius filtering to remove low-density data (default=True)
     :type filter: boolean
     
-    :param filter_ratio: fraction of data points which pass through the neighborhood radius filter (default=0.05)
+    :param filter_ratio: fraction of data points which pass through the neighborhood radius filter (default=0.25)
     :type filter_ratio: float
+    
+    :param filter_brute_step: step size in distance units for brute force filter radius optimization (final optimization searches between intervals) (default=0.05)
+    :type filter_brute_step: float     
     
     :param core_points_only: use only core points to calculate medoid structures (default=True)
     :type core_points_only: boolean
+    
+    :param homopolymer_sym: if there is end-to-end symmetry, scan forwards and backwards sequences for lowest rmsd (default=False)
+    :type homopolymer_sym: boolean
 
     :returns:
        - medoid_positions ( np.array( float * unit.angstrom ( n_clusters x num_particles x 3 ) ) ) - A 3D numpy array of poses corresponding to the medoids of all trajectory clusters.
@@ -279,18 +301,17 @@ def get_cluster_medoid_positions_DBSCAN(
     if cgmodel is None:
         top_from_pdb = file_list[0]
 
-
-    distances, traj_all, original_indices = get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end, return_original_indices=True)
-
-    
+    distances, traj_all, original_indices = get_rmsd_matrix(
+        file_list, cgmodel, frame_start, frame_stride, frame_end,
+        return_original_indices=True, homopolymer_sym=homopolymer_sym)
     
     if filter:
         # Filter distances:
-        
-
         distances, dense_indices, filter_ratio_actual, original_indices = \
-            filter_distances(distances, filter_ratio=filter_ratio, return_original_indices = True, original_indices = original_indices)
-        
+            filter_distances(distances,
+                filter_ratio=filter_ratio, filter_brute_step=filter_brute_step,
+                return_original_indices=True, original_indices=original_indices
+                )
         traj_all = traj_all[dense_indices]
 
     if plot_rmsd_hist:
@@ -429,7 +450,8 @@ def get_cluster_medoid_positions_DBSCAN(
 def get_cluster_medoid_positions_OPTICS(
     file_list, cgmodel, min_samples=5, xi=0.05,
     frame_start=0, frame_stride=1, frame_end=-1, output_format="pdb", output_dir="cluster_output", output_cluster_traj = False,
-    plot_silhouette=True, plot_rmsd_hist=True, filter=True, filter_ratio=0.05):
+    plot_silhouette=True, plot_rmsd_hist=True, filter=True, filter_ratio=0.25, filter_brute_step=0.05,
+    homopolymer_sym=False):
     """
     Given PDB or DCD trajectory files and coarse grained model as input, this function performs OPTICS clustering on the poses in the trajectory, and returns a list of the coordinates for the medoid pose of each cluster.
 
@@ -466,8 +488,14 @@ def get_cluster_medoid_positions_OPTICS(
     :param filter: option to apply neighborhood radius filtering to remove low-density data (default=True)
     :type filter: boolean
     
-    :param filter_ratio: fraction of data points which pass through the neighborhood radius filter (default=0.05)
+    :param filter_ratio: fraction of data points which pass through the neighborhood radius filter (default=0.25)
     :type filter_ratio: float
+    
+    :param filter_brute_step: step size in distance units for brute force filter radius optimization (final optimization searches between intervals) (default=0.05)
+    :type filter_brute_step: float     
+    
+    :param homopolymer_sym: if there is end-to-end symmetry, scan forwards and backwards sequences for lowest rmsd (default=False)
+    :type homopolymer_sym: boolean    
 
     :returns:
        - medoid_positions ( np.array( float * unit.angstrom ( n_clusters x num_particles x 3 ) ) ) - A 3D numpy array of poses corresponding to the medoids of all trajectory clusters.
@@ -484,13 +512,17 @@ def get_cluster_medoid_positions_OPTICS(
     if cgmodel is None:
         top_from_pdb = file_list[0]
     
-    distances, traj_all, original_indices = get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end, return_original_indices=True)
+    distances, traj_all, original_indices = get_rmsd_matrix(
+        file_list, cgmodel, frame_start, frame_stride, frame_end,
+        return_original_indices=True, homopolymer_sym=homopolymer_sym)
     
     if filter:
         # Filter distances:
         distances, dense_indices, filter_ratio_actual, original_indices = \
-            filter_distances(distances, filter_ratio=filter_ratio, return_original_indices = True, original_indices = original_indices)
-        
+            filter_distances(distances,
+                filter_ratio=filter_ratio, filter_brute_step=filter_brute_step,
+                return_original_indices=True, original_indices=original_indices
+                )
         traj_all = traj_all[dense_indices]
 
     
@@ -597,7 +629,8 @@ def get_cluster_medoid_positions_OPTICS(
     return medoid_positions, cluster_sizes, cluster_rmsd, n_noise, silhouette_avg, labels, original_indices
     
     
-def filter_distances(distances, filter_ratio=0.05, return_original_indices = False, original_indices = None):
+def filter_distances(distances, filter_ratio=0.25, return_original_indices=False, original_indices=None,
+    filter_brute_step=0.05):
     """
     Function for filtering out data points with few neighbors within a cutoff radius
     
@@ -607,6 +640,9 @@ def filter_distances(distances, filter_ratio=0.05, return_original_indices = Fal
     :param filter_ratio: desired fraction of data remaining after neighborhood radius filtering
     :type filter_ratio: float
     
+    :param filter_brute_step: step size in distance units for brute force filter radius optimization (final optimization searches between intervals) (default=0.05)
+    :type filter_brute_step: float    
+    
     :returns:
        - distances_filtered (2d numpy array) - distance matrix of data points satisfying filter parameters
        - neighbors_dense (1d numpy array) - indices of the original dataset which satisfy filter parameters
@@ -615,10 +651,13 @@ def filter_distances(distances, filter_ratio=0.05, return_original_indices = Fal
     
     filter_ratio_target = filter_ratio
     
-    def get_filter_ratio(x0):
+    # Run a series of 1d optimizations, with increasing number of number of neighbor criteria until
+    # we achieve the desired filter ratio
+    # This avoids bad convergence when non-integer number of neighbors has no effect on the objective function.
+    
+    def get_filter_ratio(x0, density_cutoff):
         # Function to minimize
-        cutoff_radius = x0[0]
-        density_cutoff = x0[1]
+        cutoff_radius = x0
     
         neighbors = np.zeros((len(distances[:,0])))
         
@@ -633,13 +672,49 @@ def filter_distances(distances, filter_ratio=0.05, return_original_indices = Fal
     
     # Optimize cutoff_radius, density_cutoff parameters to get desired filter ratio
     # A value of 0.05 is reasonable for rmsd distances, 75 is reasonable for torsion n-dimensional euclidean distances
-    x0 = [np.mean(distances)/2, 5]
     
-    results = minimize(get_filter_ratio, x0, method='Nelder-Mead')
+    # Bounds for brute force minimization (neither gradient or stochastic methods are reliable here)
+    # Here we set the lower bound to 1 brute step (finisher miniimization can find a solution below it if too large)
+    bounds = (filter_brute_step,np.max(distances))
     
-    cutoff_radius = results.x[0]
-    density_cutoff = results.x[1]
+    # Starting number of neighbors within radius:
+    density_cutoff = 1
+    convergence = False
     
+    # Save all the results in case we don't meet the specified tolerance:
+    saved_results = {}
+    f_vals = []
+    
+    # Construct vector of brute force radii to test:
+    brute_range = [slice(bounds[0],bounds[1],filter_brute_step)]
+    
+    while convergence == False:
+        results = brute(
+            get_filter_ratio, brute_range, args=(density_cutoff,),
+            full_output=True,finish=fmin,
+            )
+            
+        saved_results[density_cutoff] = results
+        f_vals.append(results[1])
+    
+        cutoff_radius = results[0]
+        if results[1] <= 1E-6 and results[1] != filter_ratio_target:
+            # Second check is to tell if all data was filtered out (filter_ratio of 0)
+            convergence = True
+        else:
+            density_cutoff += 1
+            
+        if density_cutoff > 15:
+            break
+            
+    f_vals_array = np.asarray(f_vals)
+            
+    # If filtering tolerance not met, use the best value:        
+    if convergence == False:
+        opt_index = np.argmin(f_vals_array)
+        density_cutoff = opt_index+1
+        cutoff_radius = saved_results[density_cutoff][1]
+        
     # Apply filtering parameters:
     
     neighbors = np.zeros((len(distances[:,0])))
@@ -755,7 +830,8 @@ def make_cluster_distance_plots(n_clusters,cluster_fit,dist_to_centroids,plotfil
     plt.savefig(plotfile)
     
      
-def get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end, return_original_indices = False):
+def get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end,
+    return_original_indices=False, homopolymer_sym=False):
     """Internal function for reading trajectory files and computing rmsd"""
     
     # Load files as {replica number: replica trajectory}
@@ -795,17 +871,125 @@ def get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end, re
         if return_original_indices:
             original_indices[i] = original_indices[i][frame_start:frame_end:frame_stride]
 
+    # For homopolymers with end-to-end symmetry, we need to check the forward and backward
+    # sequences for the lowest RMSD.
 
-    # Align structures with first frame as reference:
-    for i in range(1,traj_all.n_frames):
-        md.Trajectory.superpose(traj_all[i],traj_all[0])
-        # This rewrites to traj_all
-
-    # Compute pairwise rmsd:
-    distances = np.empty((traj_all.n_frames, traj_all.n_frames))
-    for i in range(traj_all.n_frames):
-        distances[i] = md.rmsd(traj_all, traj_all, i)
+    if homopolymer_sym:
+        # ***Note: this assumes that the particles are indexed by monomer, and in the same
+        # order for each monomer.
+        # We check if the model is a linear homopolymer, since there may be multiple backbone
+        # beads per monomer.
     
+        #------------------------#
+        # Forward sequence       #
+        #------------------------#
+
+        # Align structures with first frame as reference:
+        for i in range(1,traj_all.n_frames):
+            md.Trajectory.superpose(traj_all[i],traj_all[0])
+            # This rewrites to traj_all
+            
+        # Compute pairwise rmsd:
+        distances_forward = np.empty((traj_all.n_frames, traj_all.n_frames))
+        for i in range(traj_all.n_frames):
+            distances_forward[i] = md.rmsd(traj_all, traj_all, i)
+            
+        #------------------------#
+        # Reverse sequence       #
+        #------------------------#
+        
+        # We need to use the particle type list of the original model,
+        # and reconstruct monomer by monomer from the opposite end.
+         
+        n_particles = rep_traj[0].n_atoms
+        
+        particle_type_list = []
+        particle_indices_forward = []
+        particle_indices_reverse = []
+
+        for p in range(n_particles):
+            particle_indices_forward.append(p)
+            particle_type_list.append(cgmodel.get_particle_type_name(p))
+        
+        # Check if linear chain with multiple beads per monomer:
+        mono = cgmodel.monomer_types
+        if len(mono) > 1:
+            print(f'Error: cannot apply end-to-end symmetry with multiple monomer types')
+            exit()
+        
+        mono = mono[0]
+        mono_bond_start = mono['start']
+        mono_bond_end = mono['end']
+        mono_bond_list = mono['bond_list']
+        mono_particle_sequence = mono['particle_sequence']
+
+        #***TODO: add rigorous check for linear topology here.
+        
+        n_particle_unique = len(set(particle_type_list))
+        
+        n_particles_per_mono = len(mono_particle_sequence)
+
+        n_mono = int(n_particles/n_particles_per_mono)
+        
+        if n_particle_unique == 1:
+            particle_indices_reverse = particle_indices_forward[::-1]
+        
+        else:
+            for m in range(n_mono):
+                for p in range(n_particles_per_mono):
+                    particle_indices_reverse.append(n_particles - n_particles_per_mono*(m+1) + p)        
+
+        positions_rev = np.empty((traj_all.n_frames, traj_all.n_atoms, 3))
+
+        # Reassign the particle coordinates by the reverse index (coordinate rows)
+        for i in range(traj_all.n_frames):
+            for j in range(traj_all.n_atoms):
+                positions_rev[i,particle_indices_reverse[j],:] = traj_all[i].xyz[0][particle_indices_forward[j]]
+            
+        # Make a new MDTraj object for the reverse positions.
+        # (coordinates seemingly cannot be modified in an existing one)
+            
+        traj_reverse = md.Trajectory(
+            xyz=positions_rev,
+            topology=md.Topology.from_openmm(cgmodel.topology),
+        )
+            
+        # Re-superpose with the flipped coordinates.
+        # Here the reference frame is the same as the original forward direction:
+        for i in range(traj_reverse.n_frames):
+            md.Trajectory.superpose(traj_reverse[i],traj_all[0])
+            
+        # Compute pairwise rmsd between the reverse and forward structures:
+        # (reverse to reverse will be the same as forward to forward)
+        distances_reverse = np.empty((traj_all.n_frames, traj_reverse.n_frames))
+        for i in range(traj_all.n_frames):
+            distances_reverse[i] = md.rmsd(traj_reverse, traj_all, i)
+            # Second argument is the reference traj to measure to.
+    
+        # Now, take the minimum distances:
+        distances = np.empty((traj_all.n_frames, traj_all.n_frames))
+        n_reversed = 0
+        for i in range(distances_reverse.shape[0]):
+            for j in range(distances_reverse.shape[1]):
+                if distances_forward[i,j] < distances_reverse[i,j]:
+                    distances[i,j] = distances_forward[i,j]
+                else:
+                    distances[i,j] = distances_reverse[i,j]
+                    n_reversed += 1
+
+        print(f'{n_reversed} reverse distances used')
+                
+    else:
+        # Align structures with first frame as reference:
+        for i in range(1,traj_all.n_frames):
+            md.Trajectory.superpose(traj_all[i],traj_all[0])
+            # This rewrites to traj_all
+
+        # Compute pairwise rmsd:
+        distances = np.empty((traj_all.n_frames, traj_all.n_frames))
+        for i in range(traj_all.n_frames):
+            distances[i] = md.rmsd(traj_all, traj_all, i)
+        
     if return_original_indices:
         original_indices = np.concatenate(original_indices)
         return distances, traj_all, original_indices.reshape(-1)
