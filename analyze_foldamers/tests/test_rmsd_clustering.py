@@ -295,7 +295,7 @@ def test_clustering_dbscan_dcd(tmpdir):
     frame_stride=1
     frame_end=-1
 
-    # Run OPTICS density-based clustering
+    # Run DBSCAN density-based clustering
     medoid_positions, cluster_sizes, cluster_rmsd, n_noise, silhouette_avg, labels, original_indices = \
         get_cluster_medoid_positions_DBSCAN(
             dcd_file_list,
@@ -340,7 +340,7 @@ def test_clustering_dbscan_dcd_homopolymer_sym(tmpdir):
     frame_stride=1
     frame_end=-1
 
-    # Run OPTICS density-based clustering
+    # Run DBSCAN density-based clustering
     medoid_positions, cluster_sizes, cluster_rmsd, n_noise, silhouette_avg, labels, original_indices = \
         get_cluster_medoid_positions_DBSCAN(
             dcd_file_list,
