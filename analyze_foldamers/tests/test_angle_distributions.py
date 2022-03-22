@@ -10,13 +10,10 @@ import sys
 import analyze_foldamers
 import pytest
 from analyze_foldamers.parameters.angle_distributions import *
-<<<<<<< HEAD
-from analyze_foldamers.parameters.radius_gyration import *
-=======
 from analyze_foldamers.parameters.bond_distributions import *
+from analyze_foldamers.parameters.radius_gyration import *
 from cg_openmm.cg_model.cgmodel import CGModel
 
->>>>>>> 2b510dc8100481007fef8c9684f198a64f43ef90
 
 def test_analyze_foldamers_imported():
     """Sample test, will always pass so long as import statement worked"""

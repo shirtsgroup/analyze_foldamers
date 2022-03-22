@@ -1,32 +1,20 @@
+import copy
 import os
 
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import mdtraj as md
 import numpy as np
-<<<<<<< HEAD
-import copy
-from sklearn.cluster import KMeans, OPTICS, DBSCAN
-from sklearn.cluster import AgglomerativeClustering, SpectralClustering
-from sklearn.metrics import silhouette_score, silhouette_samples
-=======
->>>>>>> 2b510dc8100481007fef8c9684f198a64f43ef90
 from analyze_foldamers.parameters.angle_distributions import *
 from cg_openmm.cg_model.cgmodel import CGModel
 from cg_openmm.utilities.iotools import write_pdbfile_without_topology
 from openmm import unit
-from scipy.optimize import minimize
-from sklearn.cluster import (DBSCAN, OPTICS, AgglomerativeClustering, KMeans,
-                             SpectralClustering)
+from scipy.optimize import brute, fmin, minimize, minimize_scalar
+from sklearn.cluster import DBSCAN, OPTICS, KMeans
 from sklearn.metrics import silhouette_samples, silhouette_score
 from sklearn_extra.cluster import KMedoids
-<<<<<<< HEAD
-from scipy.optimize import minimize, minimize_scalar, brute, fmin
-    
-=======
 
 
->>>>>>> 2b510dc8100481007fef8c9684f198a64f43ef90
 def get_representative_structures(
     file_list, cgmodel,
     frame_start=0, frame_stride=1, frame_end=-1,
