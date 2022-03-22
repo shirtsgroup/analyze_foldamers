@@ -1,9 +1,11 @@
 import os
-import numpy as np
+
 import mdtraj as md
-from simtk import unit
-from cg_openmm.cg_model.cgmodel import CGModel
+import numpy as np
 from analyze_foldamers.utilities.plot import plot_distribution
+from cg_openmm.cg_model.cgmodel import CGModel
+from openmm import unit
+
 
 def calc_radius_gyration(
     cgmodel, file_list, nbins=90, frame_start=0, frame_stride=1, frame_end=-1,
