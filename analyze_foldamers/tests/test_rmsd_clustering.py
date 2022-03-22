@@ -2,14 +2,15 @@
 Unit and regression test for the analyze_foldamers package.
 """
 
+import os
+import pickle
+import sys
+
 # Import package, test suite, and other packages as needed
 import analyze_foldamers
 import pytest
-import sys
-import os
-import pickle
-from cg_openmm.cg_model.cgmodel import CGModel
 from analyze_foldamers.ensembles.cluster import *
+from cg_openmm.cg_model.cgmodel import CGModel
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 data_path = os.path.join(current_path, 'test_data')

@@ -1,7 +1,8 @@
 # define a helix
 
-import numpy as np
 import pdb
+
+import numpy as np
 import scipy.optimize
 
 length = (
@@ -285,8 +286,8 @@ print(
     "objective function with original parameters:", obj_for_cpv([0, pitch, length / radius], up, z)
 )
 
-from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 curves = [c, cp, u, up, upr]
 labels = [
