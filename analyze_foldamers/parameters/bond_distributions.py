@@ -1,13 +1,15 @@
 import os
-import numpy as np
-import mdtraj as md
-from simtk import unit
-from cg_openmm.cg_model.cgmodel import CGModel
-from analyze_foldamers.utilities.plot import plot_distribution
+
 import matplotlib
-import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+import matplotlib.pyplot as plt
+import mdtraj as md
+import numpy as np
+from analyze_foldamers.utilities.plot import plot_distribution
+from cg_openmm.cg_model.cgmodel import CGModel
 from matplotlib.backends.backend_pdf import PdfPages
+from openmm import unit
+
 
 def assign_bond_types(cgmodel, bond_list):
     """Internal function for assigning bond types"""

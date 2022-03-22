@@ -1,15 +1,16 @@
-import os
 import csv
-import numpy as np
-import matplotlib.pyplot as pyplot
+import os
 from statistics import mean
-from simtk import unit
-from simtk.openmm.app.pdbfile import PDBFile
+
+import matplotlib.pyplot as pyplot
+import numpy as np
+from analyze_foldamers.parameters.helical_fitting import *
 from cg_openmm.cg_model.cgmodel import CGModel
 from cg_openmm.parameters.reweight import *
-from analyze_foldamers.parameters.helical_fitting import *
-from cg_openmm.thermo.calc import *
 from cg_openmm.simulation.rep_exch import *
+from cg_openmm.thermo.calc import *
+from openmm import unit
+from openmm.app.pdbfile import PDBFile
 
 n_bins = 50
 

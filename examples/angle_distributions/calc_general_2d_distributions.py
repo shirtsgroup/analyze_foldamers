@@ -1,10 +1,11 @@
 import os
-import numpy as np
-from simtk import unit
-from cg_openmm.cg_model.cgmodel import CGModel
 import pickle
-from analyze_foldamers.parameters.bond_distributions import *
+
+import numpy as np
 from analyze_foldamers.parameters.angle_distributions import *
+from analyze_foldamers.parameters.bond_distributions import *
+from cg_openmm.cg_model.cgmodel import CGModel
+from openmm import unit
 
 # This script calculates and plots 2d histograms for any combination of bonded parameters,
 # given a CGModel object and list of trajectory files (pdb or dcd).

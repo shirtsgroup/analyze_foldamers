@@ -1,11 +1,12 @@
 import os
-import numpy as np
+import pickle
+
 import matplotlib.pyplot as pyplot
 import mdtraj as md
-from simtk import unit
-from cg_openmm.cg_model.cgmodel import CGModel
-import pickle
+import numpy as np
 from analyze_foldamers.parameters.angle_distributions import *
+from cg_openmm.cg_model.cgmodel import CGModel
+from openmm import unit
 
 # This script calculates and plots angle distributions from a CGModel object and pdb trajectory
 

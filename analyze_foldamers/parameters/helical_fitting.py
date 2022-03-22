@@ -1,12 +1,14 @@
-import os, subprocess
-import numpy as np
-import simtk.unit as unit
+import os
+import subprocess
 from statistics import mean
-from scipy.stats import linregress
-from scipy import spatial
+
 import matplotlib.pyplot as plt
-from cg_openmm.utilities.random_builder import *
+import numpy as np
 from cg_openmm.utilities.iotools import write_pdbfile_without_topology
+from cg_openmm.utilities.random_builder import *
+from openmm import unit
+from scipy import spatial
+from scipy.stats import linregress
 
 kB = unit.MOLAR_GAS_CONSTANT_R # Boltzmann constant
 

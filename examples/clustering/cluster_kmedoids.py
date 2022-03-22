@@ -1,11 +1,12 @@
 import os
-from simtk import unit
+import pickle
+
+import matplotlib.pyplot as plt
 import mdtraj as md
 import numpy as np
-import matplotlib.pyplot as plt
-from cg_openmm.cg_model.cgmodel import CGModel
 from analyze_foldamers.ensembles.cluster import *
-import pickle
+from cg_openmm.cg_model.cgmodel import CGModel
+from openmm import unit
 
 # Load in cgmodel
 cgmodel = pickle.load(open( "stored_cgmodel.pkl", "rb" ))

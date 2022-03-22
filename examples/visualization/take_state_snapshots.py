@@ -1,12 +1,13 @@
 import os
-import numpy as np
+import pickle
+
 import matplotlib.pyplot as pyplot
 import mdtraj as md
-from simtk import unit
-from cg_openmm.cg_model.cgmodel import CGModel
+import numpy as np
 from analyze_foldamers.ensembles.cluster import *
 from analyze_foldamers.utilities.snapshot import *
-import pickle
+from cg_openmm.cg_model.cgmodel import CGModel
+from openmm import unit
 
 # This example determines representative structures of a series of state trajectories,
 # and renders each structure using VMD.
