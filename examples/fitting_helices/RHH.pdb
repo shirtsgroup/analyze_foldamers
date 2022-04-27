@@ -1,0 +1,64 @@
+MODEL        0
+ATOM      1  BB1 CG1 A   1      -1.354   0.301   2.222  1.00  0.00          B   
+ATOM      2  BB2 CG1 A   1      -0.354   0.301   2.222  1.00  0.00          B   
+ATOM      3  BB3 CG1 A   1       0.144  -0.495   1.879  1.00  0.00          B   
+ATOM      4 SC1  CG1 A   1      -1.993  -0.708   2.677  1.00  0.00          Sc  
+ATOM      5 SC2  CG1 A   1       0.283   1.268   2.762  1.00  0.00          Sc  
+ATOM      6 SC3  CG1 A   1       1.283  -0.795   2.375  1.00  0.00          Sc  
+ATOM      7  BB1 CG1 A   2      -0.290  -1.110   1.221  1.00  0.00          B   
+ATOM      8  BB2 CG1 A   2      -1.019  -0.770   0.627  1.00  0.00          B   
+ATOM      9  BB3 CG1 A   2      -1.079   0.206   0.417  1.00  0.00          B   
+ATOM     10 SC1  CG1 A   2       0.008  -2.353   1.219  1.00  0.00          Sc  
+ATOM     11 SC2  CG1 A   2      -1.933  -1.566   0.223  1.00  0.00          Sc  
+ATOM     12 SC3  CG1 A   2      -2.220   0.750   0.234  1.00  0.00          Sc  
+ATOM     13  BB1 CG1 A   3      -0.252   0.769   0.421  1.00  0.00          B   
+ATOM     14  BB2 CG1 A   3       0.643   0.345   0.290  1.00  0.00          B   
+ATOM     15  BB3 CG1 A   3       0.721  -0.519  -0.209  1.00  0.00          B   
+ATOM     16 SC1  CG1 A   3      -0.339   2.027   0.627  1.00  0.00          Sc  
+ATOM     17 SC2  CG1 A   3       1.688   0.896   0.776  1.00  0.00          Sc  
+ATOM     18 SC3  CG1 A   3       1.739  -1.269  -0.031  1.00  0.00          Sc  
+ATOM     19  BB1 CG1 A   4       0.026  -0.771  -0.883  1.00  0.00          B   
+ATOM     20  BB2 CG1 A   4      -0.528  -0.063  -1.319  1.00  0.00          B   
+ATOM     21  BB3 CG1 A   4      -0.165   0.863  -1.421  1.00  0.00          B   
+ATOM     22 SC1  CG1 A   4      -0.085  -1.988  -1.257  1.00  0.00          Sc  
+ATOM     23 SC2  CG1 A   4      -1.659  -0.364  -1.832  1.00  0.00          Sc  
+ATOM     24 SC3  CG1 A   4      -0.960   1.838  -1.647  1.00  0.00          Sc  
+ATOM     25  BB1 CG1 A   5       0.824   1.013  -1.437  1.00  0.00          B   
+ATOM     26  BB2 CG1 A   5       1.433   0.287  -1.755  1.00  0.00          B   
+ATOM     27  BB3 CG1 A   5       1.075  -0.448  -2.332  1.00  0.00          B   
+ATOM     28 SC1  CG1 A   5       1.295   2.175  -1.190  1.00  0.00          Sc  
+ATOM     29 SC2  CG1 A   5       2.685   0.353  -1.511  1.00  0.00          Sc  
+ATOM     30 SC3  CG1 A   5       0.373  -0.166  -3.362  1.00  0.00          Sc  
+TER      31      CG1 A   5
+ENDMDL
+CONECT    1    2    4
+CONECT    2    1    3    5
+CONECT    3    2    6    7
+CONECT    4    1
+CONECT    5    2
+CONECT    6    3
+CONECT    7    3    8   10
+CONECT    8    7    9   11
+CONECT    9    8   12   13
+CONECT   10    7
+CONECT   11    8
+CONECT   12    9
+CONECT   13    9   14   16
+CONECT   14   13   15   17
+CONECT   15   14   18   19
+CONECT   16   13
+CONECT   17   14
+CONECT   18   15
+CONECT   19   15   20   22
+CONECT   20   19   21   23
+CONECT   21   20   24   25
+CONECT   22   19
+CONECT   23   20
+CONECT   24   21
+CONECT   25   21   26   28
+CONECT   26   25   27   29
+CONECT   27   26   30
+CONECT   28   25
+CONECT   29   26
+CONECT   30   27
+END
