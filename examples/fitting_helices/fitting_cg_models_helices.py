@@ -1,19 +1,18 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.optimize import least_squares, minimize, basinhopping
 from mpl_toolkits import mplot3d
-from scipy.optimize._trustregion_constr.minimize_trustregion_constr import TERMINATION_MESSAGES
 from analyze_foldamers.parameters.helical_fitting_2 import * 
 import mdtraj as md
 
 
 def main():
-    helix_traj = md.load("LHH.pdb")
+    helix_traj = md.load("RHH_small_angle.pdb")
     top = helix_traj.topology
     bb_helix = helix_traj.atom_slice(top.select("name BB1 BB2 BB3"))
     
     # Scaling helix to help with fitting. Computers are bad at small numbers
     test_helix = 100*bb_helix.xyz[0]
+    test_helix = test_helix - np.mean(test_helix, axis=0)
 
     # Fit helix points to helix equation
     entries = []
