@@ -217,7 +217,7 @@ def get_cluster_medoid_positions_DBSCAN(
     frame_start=0, frame_stride=1, frame_end=-1, output_format="pdb",
     output_dir="cluster_output", output_cluster_traj = False, plot_silhouette=True,
     plot_rmsd_hist=True, filter=True, filter_ratio=0.25,
-    core_points_only=True):
+    core_points_only=True, parallel=1):
     """
     Given PDB or DCD trajectory files and coarse grained model as input, this function performs DBSCAN clustering on the poses in the trajectory, and returns a list of the coordinates for the medoid pose of each cluster.
 
@@ -307,7 +307,7 @@ def get_cluster_medoid_positions_DBSCAN(
         plt.close()    
     
     # Cluster with sklearn DBSCAN
-    dbscan = DBSCAN(min_samples=min_samples,eps=eps,metric='precomputed').fit(distances)
+    dbscan = DBSCAN(min_samples=min_samples,eps=eps,metric='precomputed', n_jobs=parallel).fit(distances)
     # The produces a cluster labels from 0 to n_clusters-1, and assigns -1 to noise points
     
     # Get labels
@@ -775,8 +775,9 @@ def get_rmsd_matrix(file_list, cgmodel, frame_start, frame_stride, frame_end, re
             if len(original_indices) == 0:
                 start = 0
             else:
-                start = original_indices[-1][-1]
-            original_indices.append(start + np.arange(rep_traj[i].n_frames))
+                start = original_indices[-1][-1] + 1
+            original_indices.append(start + np.arange(rep_traj[i].n_frames))    
+    a, counts = np.unique(original_indices, return_counts=True)
             
     # Combine all trajectories, selecting specified frames
     if frame_end == -1:

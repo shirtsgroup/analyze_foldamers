@@ -170,6 +170,7 @@ def main():
     print("Helix Fit Summary")
     print("Radius", radius)
     print("Angular Frequency", w)
+    print("Pitch", 2*np.pi / w)
     print("Phase Shift", phi)
     print("RMSE Cylinder", np.sqrt(sse_cylinder/test_helix.shape[0]))
     print("RMSE Helix", np.sqrt(sse_helix/test_helix.shape[0]))
