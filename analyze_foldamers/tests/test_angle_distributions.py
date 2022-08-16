@@ -105,6 +105,33 @@ def test_bond_dist_calc_dcd(tmpdir):
     
     assert os.path.isfile(f"{output_directory}/bond_hist_dcd.pdf") 
     
+
+def test_bond_dist_calc_dcd_mapping(tmpdir):
+    """Test bond distribution calculator"""
+    
+    output_directory = tmpdir.mkdir("output")
+    
+    # Load in a trajectory dcd file:
+    traj_file = os.path.join(data_path, "replica_1.dcd")
+
+    # Load in a CGModel:
+    cgmodel_path = os.path.join(data_path, "stored_cgmodel.pkl")
+    cgmodel = pickle.load(open(cgmodel_path, "rb"))
+    
+    # Add a trivial particle type mapping:
+    particle_mapping = {}
+    particle_mapping['bb'] = 'b'
+    particle_mapping['sc'] = 's'
+
+    bond_hist_data = calc_bond_length_distribution(
+        cgmodel,
+        traj_file,
+        plotfile=f"{output_directory}/bond_hist_dcd.pdf",
+        particle_mapping=particle_mapping,
+    )
+    
+    assert os.path.isfile(f"{output_directory}/bond_hist_dcd.pdf")     
+    
     
 def test_bond_dist_calc_dcd_multi(tmpdir):
     """Test bond distribution calculator"""
@@ -150,6 +177,33 @@ def test_angle_dist_calc_dcd(tmpdir):
     assert os.path.isfile(f"{output_directory}/angle_hist_dcd.pdf") 
     
     
+def test_angle_dist_calc_dcd_mapping(tmpdir):
+    """Test angle distribution calculator"""
+    
+    output_directory = tmpdir.mkdir("output")
+    
+    # Load in a trajectory dcd file:
+    traj_file = os.path.join(data_path, "replica_1.dcd")
+
+    # Load in a CGModel:
+    cgmodel_path = os.path.join(data_path, "stored_cgmodel.pkl")
+    cgmodel = pickle.load(open(cgmodel_path, "rb"))
+
+    # Add a trivial particle type mapping:
+    particle_mapping = {}
+    particle_mapping['bb'] = 'b'
+    particle_mapping['sc'] = 's'
+
+    angle_hist_data = calc_bond_angle_distribution(
+        cgmodel,
+        traj_file,
+        plotfile=f"{output_directory}/angle_hist_dcd.pdf",
+        particle_mapping=particle_mapping,
+    )
+    
+    assert os.path.isfile(f"{output_directory}/angle_hist_dcd.pdf")     
+    
+    
 def test_angle_dist_calc_dcd_multi(tmpdir):
     """Test angle distribution calculator"""
     
@@ -192,6 +246,33 @@ def test_torsion_dist_calc_dcd(tmpdir):
     )
     
     assert os.path.isfile(f"{output_directory}/torsion_hist_dcd.pdf") 
+    
+    
+def test_torsion_dist_calc_dcd_mapping(tmpdir):
+    """Test torsion distribution calculator"""
+    
+    output_directory = tmpdir.mkdir("output")
+    
+    # Load in a trajectory dcd file:
+    traj_file = os.path.join(data_path, "replica_1.dcd")
+
+    # Load in a CGModel:
+    cgmodel_path = os.path.join(data_path, "stored_cgmodel.pkl")
+    cgmodel = pickle.load(open(cgmodel_path, "rb"))
+    
+    # Add a trivial particle type mapping:
+    particle_mapping = {}
+    particle_mapping['bb'] = 'b'
+    particle_mapping['sc'] = 's'    
+    
+    torsion_hist_data = calc_torsion_distribution(
+        cgmodel,
+        traj_file,
+        plotfile=f"{output_directory}/torsion_hist_dcd.pdf",
+        particle_mapping=particle_mapping,
+    )
+    
+    assert os.path.isfile(f"{output_directory}/torsion_hist_dcd.pdf")     
 
 
 def test_torsion_dist_calc_dcd_multi(tmpdir):
@@ -265,6 +346,39 @@ def test_ramachandran_calc_dcd(tmpdir):
     param_opt, param_cov = fit_ramachandran_data(rama_hist, xedges, yedges)    
     
     
+def test_ramachandran_calc_dcd_mapping(tmpdir):
+    """Test ramachandran calculation/plotting"""
+
+    output_directory = tmpdir.mkdir("output")
+    
+    # Load in a trajectory pdb file:
+    traj_file = os.path.join(data_path, "replica_1.dcd")
+    
+    # Load in a CGModel:
+    cgmodel_path = os.path.join(data_path, "stored_cgmodel.pkl")
+    cgmodel = pickle.load(open(cgmodel_path, "rb"))    
+    
+    # Add a trivial particle type mapping:
+    particle_mapping = {}
+    particle_mapping['bb'] = 'b'
+    particle_mapping['sc'] = 's'      
+    
+    rama_hist, xedges, yedges = calc_ramachandran(
+        cgmodel,
+        traj_file,
+        backbone_angle_type='b_b_b',
+        backbone_torsion_type='b_b_b_b',
+        plotfile=f"{output_directory}/ramachandran_dcd.pdf",
+        particle_mapping=particle_mapping,
+    )
+     
+    assert os.path.isfile(f"{output_directory}/ramachandran_dcd.pdf") 
+     
+    # Fit ramachandran data to 2d Gaussian:
+    param_opt, param_cov = fit_ramachandran_data(rama_hist, xedges, yedges)    
+        
+    
+    
 def test_2d_dist_bond_bond_dcd(tmpdir):
     """Test general 2d histogram - bond-bond correlation"""
     output_directory = tmpdir.mkdir("output")
@@ -307,6 +421,34 @@ def test_2d_dist_bond_angle_dcd(tmpdir):
     )
      
     assert os.path.isfile(f"{output_directory}/bond_angle_2d.pdf")     
+    
+
+def test_2d_dist_bond_angle_dcd_mapping(tmpdir):
+    """Test general 2d histogram - bond-angle correlation"""
+    output_directory = tmpdir.mkdir("output")
+    
+    # Load in a trajectory pdb file:
+    traj_file = os.path.join(data_path, "replica_1.dcd")
+    
+    # Load in a CGModel:
+    cgmodel_path = os.path.join(data_path, "stored_cgmodel.pkl")
+    cgmodel = pickle.load(open(cgmodel_path, "rb"))
+    
+    # Add a trivial particle type mapping:
+    particle_mapping = {}
+    particle_mapping['bb'] = 'b'
+    particle_mapping['sc'] = 's'
+
+    hist_out, xedges, yedges = calc_2d_distribution(
+        cgmodel,
+        traj_file,
+        plotfile=f"{output_directory}/bond_angle_2d.pdf",
+        xvar_name='b_b',
+        yvar_name='b_b_s',
+        particle_mapping=particle_mapping,
+    )
+     
+    assert os.path.isfile(f"{output_directory}/bond_angle_2d.pdf")        
     
     
 def test_2d_dist_bond_torsion_dcd(tmpdir):
@@ -373,6 +515,56 @@ def test_2d_dist_angle_torsion_dcd(tmpdir):
     )
      
     assert os.path.isfile(f"{output_directory}/angle_torsion_2d.pdf")   
+    
+    
+def test_2d_dist_angle_torsion_dcd_mapping(tmpdir):
+    """Test general 2d histogram - angle-torsion correlation"""
+    output_directory = tmpdir.mkdir("output")
+    
+    # Load in a trajectory pdb file:
+    traj_file = os.path.join(data_path, "replica_1.dcd")
+    
+    # Load in a CGModel:
+    cgmodel_path = os.path.join(data_path, "stored_cgmodel.pkl")
+    cgmodel = pickle.load(open(cgmodel_path, "rb"))
+
+    # Add a trivial particle type mapping:
+    particle_mapping = {}
+    particle_mapping['bb'] = 'b'
+    particle_mapping['sc'] = 's'
+
+    hist_out, xedges, yedges = calc_2d_distribution(
+        cgmodel,
+        traj_file,
+        plotfile=f"{output_directory}/angle_torsion_2d.pdf",
+        xvar_name='b_b_s',
+        yvar_name='b_b_b_s',
+        particle_mapping=particle_mapping,
+    )
+     
+    assert os.path.isfile(f"{output_directory}/angle_torsion_2d.pdf")       
+    
+    
+def test_2d_dist_torsion_torsion_dcd(tmpdir):
+    """Test general 2d histogram - angle-torsion correlation"""
+    output_directory = tmpdir.mkdir("output")
+    
+    # Load in a trajectory pdb file:
+    traj_file = os.path.join(data_path, "replica_1.dcd")
+    
+    # Load in a CGModel:
+    cgmodel_path = os.path.join(data_path, "stored_cgmodel.pkl")
+    cgmodel = pickle.load(open(cgmodel_path, "rb"))
+
+    hist_out, xedges, yedges = calc_2d_distribution(
+        cgmodel,
+        traj_file,
+        plotfile=f"{output_directory}/angle_torsion_2d.pdf",
+        xvar_name='bb_bb_bb_bb',
+        yvar_name='bb_bb_bb_sc',
+    )
+     
+    assert os.path.isfile(f"{output_directory}/angle_torsion_2d.pdf")       
 
 
 def test_radius_gyration_pdb(tmpdir):

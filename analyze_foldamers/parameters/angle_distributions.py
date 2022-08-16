@@ -14,7 +14,7 @@ from scipy.optimize import curve_fit
 
 # These functions calculate and plot bond angle and torsion distributions from a CGModel object and pdb trajectory
 
-def assign_angle_types(cgmodel, angle_list):
+def assign_angle_types(cgmodel, angle_list, particle_mapping=None):
     """Internal function for assigning angle types"""
     
     ang_types = [] # List of angle types for each angle in angle_list
@@ -37,11 +37,18 @@ def assign_angle_types(cgmodel, angle_list):
         ang_array[i,1] = angle_list[i][1]
         ang_array[i,2] = angle_list[i][2]
         
-        particle_types = [
-            CGModel.get_particle_type_name(cgmodel,angle_list[i][0]),
-            CGModel.get_particle_type_name(cgmodel,angle_list[i][1]),
-            CGModel.get_particle_type_name(cgmodel,angle_list[i][2])
-        ]
+        if particle_mapping is None:
+            particle_types = [
+                CGModel.get_particle_type_name(cgmodel,angle_list[i][0]),
+                CGModel.get_particle_type_name(cgmodel,angle_list[i][1]),
+                CGModel.get_particle_type_name(cgmodel,angle_list[i][2])
+            ]
+        else:
+            particle_types = [
+                particle_mapping[CGModel.get_particle_type_name(cgmodel,angle_list[i][0])],
+                particle_mapping[CGModel.get_particle_type_name(cgmodel,angle_list[i][1])],
+                particle_mapping[CGModel.get_particle_type_name(cgmodel,angle_list[i][2])]
+            ]
         
         string_name = ""
         reverse_string_name = ""
@@ -79,7 +86,7 @@ def assign_angle_types(cgmodel, angle_list):
     return ang_types, ang_array, ang_sub_arrays, n_i, i_angle_type, ang_dict, inv_ang_dict
     
 
-def assign_torsion_types(cgmodel, torsion_list):
+def assign_torsion_types(cgmodel, torsion_list, particle_mapping=None):
     """Internal function for assigning torsion types"""
     
     torsion_types = [] # List of torsion types for each torsion in torsion_list
@@ -100,12 +107,20 @@ def assign_torsion_types(cgmodel, torsion_list):
         torsion_array[i,2] = torsion_list[i][2]
         torsion_array[i,3] = torsion_list[i][3]
         
-        particle_types = [
-            CGModel.get_particle_type_name(cgmodel,torsion_list[i][0]),
-            CGModel.get_particle_type_name(cgmodel,torsion_list[i][1]),
-            CGModel.get_particle_type_name(cgmodel,torsion_list[i][2]),
-            CGModel.get_particle_type_name(cgmodel,torsion_list[i][3])
-        ]
+        if particle_mapping is None:
+            particle_types = [
+                CGModel.get_particle_type_name(cgmodel,torsion_list[i][0]),
+                CGModel.get_particle_type_name(cgmodel,torsion_list[i][1]),
+                CGModel.get_particle_type_name(cgmodel,torsion_list[i][2]),
+                CGModel.get_particle_type_name(cgmodel,torsion_list[i][3])
+            ]
+        else:
+            particle_types = [
+                particle_mapping[CGModel.get_particle_type_name(cgmodel,torsion_list[i][0])],
+                particle_mapping[CGModel.get_particle_type_name(cgmodel,torsion_list[i][1])],
+                particle_mapping[CGModel.get_particle_type_name(cgmodel,torsion_list[i][2])],
+                particle_mapping[CGModel.get_particle_type_name(cgmodel,torsion_list[i][3])]
+            ]
         
         string_name = ""
         reverse_string_name = ""
@@ -147,7 +162,8 @@ def assign_torsion_types(cgmodel, torsion_list):
 
 def calc_bond_angle_distribution(
     cgmodel, file_list, nbins=90, frame_start=0, frame_stride=1, frame_end=-1, 
-    plot_per_page=2, temperature_list=None, plotfile="angle_hist.pdf"
+    plot_per_page=2, temperature_list=None, plotfile="angle_hist.pdf",
+    particle_mapping=None,
     ):
     """
     Calculate and plot all bond angle distributions from a CGModel object and pdb trajectory
@@ -179,6 +195,9 @@ def calc_bond_angle_distribution(
     :param plotfile: Base filename for saving bond angle distribution pdf plots
     :type plotfile: str
     
+    :param particle_mapping: dictionary mapping specific particle types to more general bonded types (for example, 'sc1' --> 'sc')
+    :type particle_mapping: dict(str:str)    
+    
     :returns:
        - angle_hist_data ( dict )    
     
@@ -194,7 +213,7 @@ def calc_bond_angle_distribution(
     
     # Assign angle types:
     ang_types, ang_array, ang_sub_arrays, n_i, i_angle_type, ang_dict, inv_ang_dict = \
-        assign_angle_types(cgmodel, angle_list)
+        assign_angle_types(cgmodel, angle_list, particle_mapping=particle_mapping)
          
     # Create dictionary for saving angle histogram data:
     angle_hist_data = {}
@@ -264,7 +283,8 @@ def calc_bond_angle_distribution(
     
 def calc_torsion_distribution(
     cgmodel, file_list, nbins=180, frame_start=0, frame_stride=1, frame_end=-1,
-    plot_per_page=2, temperature_list=None, plotfile="torsion_hist.pdf"
+    plot_per_page=2, temperature_list=None, plotfile="torsion_hist.pdf",
+    particle_mapping=None,
     ):
     """
     Calculate and plot all torsion distributions from a CGModel object and pdb or dcd trajectory
@@ -296,6 +316,9 @@ def calc_torsion_distribution(
     :param plotfile: Base filename for saving torsion distribution pdf plots
     :type plotfile: str
     
+    :param particle_mapping: dictionary mapping specific particle types to more general bonded types (for example, 'sc1' --> 'sc')
+    :type particle_mapping: dict(str:str)
+    
     :returns:
        - torsion_hist_data ( dict )
     
@@ -311,7 +334,7 @@ def calc_torsion_distribution(
     
     # Assign torsion types
     torsion_types, torsion_array, torsion_sub_arrays, n_i, i_torsion_type, torsion_dict, inv_torsion_dict = \
-        assign_torsion_types(cgmodel, torsion_list)
+        assign_torsion_types(cgmodel, torsion_list, particle_mapping=particle_mapping)
     
     # Create dictionary for saving torsion histogram data:
     torsion_hist_data = {}
@@ -391,6 +414,7 @@ def calc_2d_distribution(
     yvar_name = "bb_bb_bb_bb",
     colormap="nipy_spectral",
     temperature_list=None,
+    particle_mapping=None,
     ):      
 
     """
@@ -421,10 +445,10 @@ def calc_2d_distribution(
     :param plotfile: Filename for saving torsion distribution pdf plots
     :type plotfile: str
     
-    :param xvar_name: particle sequence of the x bonded parameter (default="bb_bb_bb")
+    :param xvar_name: particle sequence of the x bonded parameter, after any particle type mapping (default="bb_bb_bb")
     :type xvar_name: str
     
-    :param yvar_name: particle sequence of the y bonded parameter (default="bb_bb_bb_bb")
+    :param yvar_name: particle sequence of the y bonded parameter, after any particle type mapping (default="bb_bb_bb_bb")
     :type yvar_name: str    
     
     :param colormap: matplotlib pyplot colormap to use (default='nipy_spectral')
@@ -432,6 +456,9 @@ def calc_2d_distribution(
     
     :param temperature_list: list of temperatures corresponding to file_list. If None, no subplot labels will be used.
     :type temperature_list: list(Quantity()) 
+    
+    :param particle_mapping: dictionary mapping specific particle types to more general bonded types (for example, 'sc1' --> 'sc')
+    :type particle_mapping: dict(str:str)    
     
     :returns:
        - hist_data ( dict )
@@ -517,7 +544,7 @@ def calc_2d_distribution(
             
             # Assign bond types:
             bond_types, bond_array, bond_sub_arrays, n_i, i_bond_type, bond_dict, inv_bond_dict = \
-                assign_bond_types(cgmodel, bond_list)
+                assign_bond_types(cgmodel, bond_list, particle_mapping=particle_mapping)
             
             for i in range(i_bond_type):
                 if inv_bond_dict[str(i+1)] == xvar_name or inv_bond_dict[str(i+1)] == xvar_name_reverse:
@@ -548,7 +575,7 @@ def calc_2d_distribution(
         
             # Assign angle types:
             ang_types, ang_array, ang_sub_arrays, n_i, i_angle_type, ang_dict, inv_ang_dict = \
-                assign_angle_types(cgmodel, angle_list)
+                assign_angle_types(cgmodel, angle_list, particle_mapping=particle_mapping)
                 
             # Set bin edges:
             xvar_bin_edges = np.linspace(0,180,nbin_xvar+1)
@@ -575,7 +602,7 @@ def calc_2d_distribution(
 
             # Assign torsion types
             torsion_types, torsion_array, torsion_sub_arrays, n_j, i_torsion_type, torsion_dict, inv_torsion_dict = \
-                assign_torsion_types(cgmodel, torsion_list)
+                assign_torsion_types(cgmodel, torsion_list, particle_mapping=particle_mapping)
             
             # Set bin edges:
             xvar_bin_edges = np.linspace(-180,180,nbin_xvar+1)
@@ -608,7 +635,7 @@ def calc_2d_distribution(
             
             # Assign bond types:
             bond_types, bond_array, bond_sub_arrays, n_i, i_bond_type, bond_dict, inv_bond_dict = \
-                assign_bond_types(cgmodel, bond_list)
+                assign_bond_types(cgmodel, bond_list, particle_mapping=particle_mapping)
             
             for i in range(i_bond_type):
                 if inv_bond_dict[str(i+1)] == yvar_name or inv_bond_dict[str(i+1)] == yvar_name_reverse:
@@ -639,7 +666,7 @@ def calc_2d_distribution(
         
             # Assign angle types:
             ang_types, ang_array, ang_sub_arrays, n_i, i_angle_type, ang_dict, inv_ang_dict = \
-                assign_angle_types(cgmodel, angle_list)
+                assign_angle_types(cgmodel, angle_list, particle_mapping=particle_mapping)
                 
             # Set bin edges:
             yvar_bin_edges = np.linspace(0,180,nbin_yvar+1)
@@ -666,7 +693,7 @@ def calc_2d_distribution(
 
             # Assign torsion types
             torsion_types, torsion_array, torsion_sub_arrays, n_j, i_torsion_type, torsion_dict, inv_torsion_dict = \
-                assign_torsion_types(cgmodel, torsion_list)
+                assign_torsion_types(cgmodel, torsion_list, particle_mapping=particle_mapping)
             
             # Set bin edges:
             yvar_bin_edges = np.linspace(-180,180,nbin_yvar+1)
@@ -734,6 +761,7 @@ def calc_ramachandran(
     backbone_torsion_type = "bb_bb_bb_bb",
     colormap="nipy_spectral",
     temperature_list=None,
+    particle_mapping=None,
 ):
     """
     Calculate and plot ramachandran plot for backbone bond bending-angle and torsion
@@ -775,6 +803,9 @@ def calc_ramachandran(
     :param temperature_list: list of temperatures corresponding to file_list. If None, no subplot labels will be used.
     :type temperature_list: list(Quantity())    
     
+    :param particle_mapping: dictionary mapping specific particle types to more general bonded types (for example, 'sc1' --> 'sc')
+    :type particle_mapping: dict(str:str)    
+    
     :returns:
        - hist_data ( dict )
        - xedges ( dict )
@@ -812,7 +843,7 @@ def calc_ramachandran(
         
         # Assign angle types:
         ang_types, ang_array, ang_sub_arrays, n_i, i_angle_type, ang_dict, inv_ang_dict = \
-            assign_angle_types(cgmodel, angle_list)
+            assign_angle_types(cgmodel, angle_list, particle_mapping=particle_mapping)
         
         # Set bin edges:
         angle_bin_edges = np.linspace(0,180,nbin_theta+1)
@@ -840,7 +871,7 @@ def calc_ramachandran(
 
         # Assign torsion types
         torsion_types, torsion_array, torsion_sub_arrays, n_j, i_torsion_type, torsion_dict, inv_torsion_dict = \
-            assign_torsion_types(cgmodel, torsion_list)
+            assign_torsion_types(cgmodel, torsion_list, particle_mapping=particle_mapping)
         
         # Set bin edges:
         torsion_bin_edges = np.linspace(-180,180,nbin_alpha+1)
