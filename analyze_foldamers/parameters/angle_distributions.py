@@ -757,8 +757,8 @@ def calc_ramachandran(
     frame_stride=1,
     frame_end=-1,
     plotfile="ramachandran.pdf",
-    backbone_angle_type = "bb_bb_bb",
-    backbone_torsion_type = "bb_bb_bb_bb",
+    backbone_angle_type="bb_bb_bb",
+    backbone_torsion_type="bb_bb_bb_bb",
     colormap="nipy_spectral",
     temperature_list=None,
     particle_mapping=None,
@@ -791,10 +791,10 @@ def calc_ramachandran(
     :param plotfile: Filename for saving torsion distribution pdf plots
     :type plotfile: str
     
-    :param backbone_angle_type: particle sequence of the backbone angles (default="bb_bb_bb") - for now only single sequence permitted
+    :param backbone_angle_type: particle sequence of the backbone angles, after any particle type mapping (default="bb_bb_bb")
     :type backbone_angle_type: str
     
-    :param backbone_torsion_type: particle sequence of the backbone angles (default="bb_bb_bb_bb") - for now only single sequence permitted
+    :param backbone_torsion_type: particle sequence of the backbone angles, after any particle type mapping (default="bb_bb_bb_bb")
     :type backbone_torsion_type: str    
     
     :param colormap: matplotlib pyplot colormap to use (default='nipy_spectral')
