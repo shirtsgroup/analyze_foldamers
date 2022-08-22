@@ -11,14 +11,14 @@ from matplotlib.backends.backend_pdf import PdfPages
 from openmm import unit
 
 
-def assign_bond_types(cgmodel, bond_list):
+def assign_bond_types(cgmodel, bond_list, particle_mapping=None):
     """Internal function for assigning bond types"""
     
     bond_types = []
     
     bond_array = np.zeros((len(bond_list),2))
     
-    # Relevant bond types are added to a dictionary as they are discovered 
+    # Relevant bond types are added to a dictionary as they are discovered
     bond_dict = {}
     
     # Create an inverse dictionary for getting bond string name from integer type
@@ -33,10 +33,17 @@ def assign_bond_types(cgmodel, bond_list):
         bond_array[i,0] = bond_list[i][0]
         bond_array[i,1] = bond_list[i][1]
         
-        particle_types = [
-            CGModel.get_particle_type_name(cgmodel,bond_list[i][0]),
-            CGModel.get_particle_type_name(cgmodel,bond_list[i][1])
-        ]
+        if particle_mapping is None:
+            particle_types = [
+                CGModel.get_particle_type_name(cgmodel,bond_list[i][0]),
+                CGModel.get_particle_type_name(cgmodel,bond_list[i][1])
+            ]
+        else:
+            # Use particle_mapping dictionary to create more general bonded types:
+            particle_types = [
+                particle_mapping[CGModel.get_particle_type_name(cgmodel,bond_list[i][0])],
+                particle_mapping[CGModel.get_particle_type_name(cgmodel,bond_list[i][1])]
+            ]
         
         string_name = ""
         reverse_string_name = ""
@@ -76,7 +83,8 @@ def assign_bond_types(cgmodel, bond_list):
     
 def calc_bond_length_distribution(
     cgmodel, file_list, nbins=90, frame_start=0, frame_stride=1, frame_end=-1,
-    plot_per_page=2, temperature_list=None, plotfile="bond_hist.pdf"
+    plot_per_page=2, temperature_list=None, plotfile="bond_hist.pdf",
+    particle_mapping=None,
     ):
     """
     Calculate and plot all bond length distributions from a CGModel object and trajectory
@@ -108,6 +116,9 @@ def calc_bond_length_distribution(
     :param plotfile: filename for saving bond length distribution pdf plots
     :type plotfile: str
     
+    :param particle_mapping: dictionary mapping specific particle types to more general bonded types (for example, 'sc1' --> 'sc') (default=None)
+    :type particle_mapping: dict(str:str)
+    
     :returns:
        - bond_hist_data ( dict )
     """   
@@ -125,7 +136,7 @@ def calc_bond_length_distribution(
     
     # Assign bond types:
     bond_types, bond_array, bond_sub_arrays, n_i, i_bond_type, bond_dict, inv_bond_dict = \
-        assign_bond_types(cgmodel, bond_list)
+        assign_bond_types(cgmodel, bond_list, particle_mapping=particle_mapping)
     
     file_index = 0
     for file in file_list:
