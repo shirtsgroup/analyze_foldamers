@@ -195,7 +195,7 @@ def calc_bond_angle_distribution(
     :param plotfile: Base filename for saving bond angle distribution pdf plots
     :type plotfile: str
     
-    :param particle_mapping: dictionary mapping specific particle types to more general bonded types (for example, 'sc1' --> 'sc')
+    :param particle_mapping: dictionary mapping specific particle types to more general bonded types (for example, 'sc1' --> 'sc') (default=None)
     :type particle_mapping: dict(str:str)    
     
     :returns:
@@ -316,7 +316,7 @@ def calc_torsion_distribution(
     :param plotfile: Base filename for saving torsion distribution pdf plots
     :type plotfile: str
     
-    :param particle_mapping: dictionary mapping specific particle types to more general bonded types (for example, 'sc1' --> 'sc')
+    :param particle_mapping: dictionary mapping specific particle types to more general bonded types (for example, 'sc1' --> 'sc') (default=None)
     :type particle_mapping: dict(str:str)
     
     :returns:
@@ -457,7 +457,7 @@ def calc_2d_distribution(
     :param temperature_list: list of temperatures corresponding to file_list. If None, no subplot labels will be used.
     :type temperature_list: list(Quantity()) 
     
-    :param particle_mapping: dictionary mapping specific particle types to more general bonded types (for example, 'sc1' --> 'sc')
+    :param particle_mapping: dictionary mapping specific particle types to more general bonded types (for example, 'sc1' --> 'sc') (default=None)
     :type particle_mapping: dict(str:str)    
     
     :returns:
@@ -803,7 +803,7 @@ def calc_ramachandran(
     :param temperature_list: list of temperatures corresponding to file_list. If None, no subplot labels will be used.
     :type temperature_list: list(Quantity())    
     
-    :param particle_mapping: dictionary mapping specific particle types to more general bonded types (for example, 'sc1' --> 'sc')
+    :param particle_mapping: dictionary mapping specific particle types to more general bonded types (for example, 'sc1' --> 'sc') (default=None)
     :type particle_mapping: dict(str:str)    
     
     :returns:

@@ -116,7 +116,7 @@ def calc_bond_length_distribution(
     :param plotfile: filename for saving bond length distribution pdf plots
     :type plotfile: str
     
-    :param particle_mapping: dictionary mapping specific particle types to more general bonded types (for example, 'sc1' --> 'sc')
+    :param particle_mapping: dictionary mapping specific particle types to more general bonded types (for example, 'sc1' --> 'sc') (default=None)
     :type particle_mapping: dict(str:str)
     
     :returns:
